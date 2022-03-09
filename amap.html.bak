@@ -1,0 +1,655 @@
+<!DOCTYPE HTML>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<style>
+		body {
+
+			width: 100vw;
+			height: 100vh;
+		}
+
+		body,html,div{
+			margin:	0px;
+			padding: 0px;
+			border:0 none;
+			overflow:hidden;
+		}
+		
+		/*
+			input{
+				position:fixed;
+				height:auto;
+				width:50vw;
+				bottom:10vh;
+				left:25vw;
+				color:;
+				z-index: 999;			
+			}
+			input[type=range]::-webkit-slider-runnable-track {
+			  width: 100%;
+			  height: 5vh;
+			  cursor: pointer;
+			  animate: 0.2s;
+			  
+			  background: #99d4ff;
+			  border-radius: 5vh;
+				
+			}
+			input[type=range]::-webkit-slider-thumb {
+			  -webkit-appearance: none;
+			 
+			  height: 5vw;
+			  width: 5vw;
+			  border-radius: 5vh;
+			  background: #ffffff;
+			  cursor: pointer;
+
+			}
+		*/
+		#yearTextField{		
+			font-family:   Brush Script MT , Garamond , Georgia , Times New Roman;
+			position: absolute;
+			top: 10vh;
+			left:0;
+			width:100vw;
+			text-align: center;
+			color: gray;
+			opacity: 0.7;
+			font-size: 70vh;
+			z-index: 998;
+			user-select: none;
+			-moz-user-select: none;
+			-khtml-user-select: none;
+			-webkit-user-select: none;
+			-o-user-select: none;
+		}
+
+		input[type="range"] { 
+			position:fixed;
+			width:50vw;
+			bottom:10vh;
+			left:25vw;	
+			z-index: 999;
+			margin: auto;
+			-webkit-appearance: none;			
+			overflow: hidden;
+			height: 2vh;			
+			cursor: pointer;
+			border-radius: 0; /* iOS */
+		}
+
+		::-webkit-slider-runnable-track {
+			background: #DDDCB2;
+		}
+
+		/*
+		 * 1. Set to 0 width and remove border for a slider without a thumb
+		 */
+		::-webkit-slider-thumb {
+			-webkit-appearance: none;
+			width: 1vw; /* 1 */
+			height: 2vh;
+			background: #FFFECD;
+			box-shadow: -100vw 0 0 100vw #99A37A;
+			border: 1vh solid #999; /* 1 */
+		}
+
+		::-moz-range-track {
+			height: 2vh;
+			background: #DDDCB2;
+		}
+
+		::-moz-range-thumb {
+			-webkit-appearance: none;
+			width: 1vw; /* 1 */
+			height: 2vh;
+			background: #FFFECD;
+			box-shadow: -100vw 0 0 100vw #99A37A;
+			border: 1vh solid #999; /* 1 */
+		}
+
+		
+	</style>
+	</style>
+	<html class='v2' dir='ltr' xmlns='http://www.w3.org/1999/xhtml' xmlns:b='http://www.google.com/2005/gml/b'
+		xmlns:data='http://www.google.com/2005/gml/data' xmlns:expr='http://www.google.com/2005/gml/expr'>
+
+	<meta content='text/html; charset=UTF-8' http-equiv='Content-Type' />
+	<title>
+		澳門賣豬仔船運圖
+	</title>
+	<script src="https://code.createjs.com/1.0.0/createjs.min.js"></script>
+	<script src="https://code.createjs.com/1.0.0/tweenjs.min.js"></script>
+	<script>
+				createjs.MotionGuidePlugin.install();
+	</script>
+</head>
+
+<body onload="init();">
+	<script>
+	
+      
+    function init(){
+		var db;
+		var shiparray = [];
+		var counter = 0;
+		//var tween;
+		//var tween2;
+		const DB_NAME = "culeships-indexeddb";
+		const DB_VERSION = 1;
+		const DB_STORE_NAME = "journeys";
+		const DB_INDEX = "year";
+		const SHIP_TO_CANVAS_RATIO = 0.1;
+    	const MACAU = {x: 1102, y: 2357};
+		const TAIWAN_STRAIT = {x: 1242,y:2289};
+		const JAPANSEA = {x: 1392,y:2280};
+		const HAWAI = {x: 2937,y: 2459};
+      	const COLLAO = {x: 4546, y: 3061 };
+		
+		const KWIN_NYON = {x: 1021, y: 2544};
+		const SOUTH_CHINA_SEA = {x: 1049, y: 2703};
+		const SINGAPORE ={x: 909, y: 2803};
+		const MALACCA_STRAIT={x: 834, y: 2770};
+		const PENANG ={x: 776, y: 2680};
+		const COLOMBA ={x: 445, y: 2740};
+		const INDIAN_OCEAN1 ={x: 186, y: 2937};
+		const INDIAN_OCEAN2 ={x: 0, y: 3328};
+		const INDIAN_OCEAN3 ={x: 7365, y: 3328};
+		const NATAL = {x: 6774, y: 3464};
+		const GEORGE = {x: 6631, y: 3569};
+		const CAPE_OF_GOOD_HOPE = {x: 6498, y: 3531};
+		const ATLANTIC_OCEAN1 = {x: 5832, y: 3414};
+		const BAIA = {x: 5376, y: 3072};
+		const ST_PAUL = {x: 5548, y: 2796};
+		const ATLANTIC_OCEAN2 = {x: 5121, y: 2611};
+		const CARIBBEAN_SEA1 = {x: 4547, y: 2517};
+		const CARIBBEAN_SEA2 = {x: 4374, y: 2374};
+		const HAVANA= {x: 4456, y: 2321};
+		const range = document.getElementById("range");
+		const yearTextField = document.getElementById("yearTextField");
+		const monthTime = 500;
+		var zoom;
+		var pathe = [];
+		var pathw1 = [];
+		var pathw2 = [];
+		var PATHE_RATIOS =[];
+		var PATHW1_RATIOS=[];
+		var PATHW2_RATIOS=[];
+		var bitmap;
+		var canvas= document.getElementById("myCanvas");
+		canvas.width = window.innerWidth;
+		canvas.height = window.innerHeight;   
+		var stage = new createjs.Stage("myCanvas");
+		var image = new Image();
+		image.src = "oldmap.jpg";
+		image.onload = handleImageLoad;
+		var ship = new Image();
+		ship.src = "Sail_plan_barque.svg";
+		
+		function handleImageLoad(){
+			bitmap = new createjs.Bitmap(image);
+			bitmap.scaleX = canvas.width/image.width;
+			bitmap.scaleY = bitmap.scaleX;
+			stage.addChild(bitmap);
+			stage.update();
+			//var shipsvg = new createjs.Bitmap(ship);
+			//var shipsvg2 = new createjs.Bitmap(ship);
+			
+			PATHE_RATIOS = [
+			  MACAU.x/image.width, MACAU.y/image.height,
+			  
+			  TAIWAN_STRAIT.x/image.width, TAIWAN_STRAIT.y/image.height,
+			  JAPANSEA.x/image.width, JAPANSEA.y/image.height,
+			  
+				HAWAI.x/image.width, HAWAI.y/image.height,
+			  COLLAO.x/image.width, COLLAO.y/image.height,
+			];
+			PATHW1_RATIOS = [
+			  MACAU.x/image.width, MACAU.y/image.height,
+			  KWIN_NYON.x/image.width, KWIN_NYON.y/image.height,
+			  SOUTH_CHINA_SEA.x/image.width, SOUTH_CHINA_SEA.y/image.height,
+			  SINGAPORE.x/image.width, SINGAPORE.y/image.height,
+			  MALACCA_STRAIT.x/image.width, MALACCA_STRAIT.y/image.height,
+			  PENANG.x/image.width, PENANG.y/image.height,
+			  COLOMBA.x/image.width, COLOMBA.y/image.height,
+			  INDIAN_OCEAN1.x/image.width, INDIAN_OCEAN1.y/image.height,
+			  INDIAN_OCEAN2.x/image.width, INDIAN_OCEAN2.y/image.height,
+			];
+			PATHW2_RATIOS = [
+			  INDIAN_OCEAN3.x/image.width, INDIAN_OCEAN3.y/image.height,
+			  NATAL.x/image.width, NATAL.y/image.height,
+			  GEORGE.x/image.width, GEORGE.y/image.height,
+			  CAPE_OF_GOOD_HOPE.x/image.width, CAPE_OF_GOOD_HOPE.y/image.height,
+			  ATLANTIC_OCEAN1.x/image.width, ATLANTIC_OCEAN1.y/image.height,
+			  BAIA .x/image.width, BAIA .y/image.height,
+			  ST_PAUL.x/image.width, ST_PAUL.y/image.height,
+			  ATLANTIC_OCEAN2.x/image.width, ATLANTIC_OCEAN2.y/image.height,
+			  CARIBBEAN_SEA1.x/image.width, CARIBBEAN_SEA1.y/image.height,
+			  CARIBBEAN_SEA2.x/image.width, CARIBBEAN_SEA2.y/image.height,
+			  HAVANA.x/image.width, HAVANA.y/image.height,
+			];
+		//console.log("PATHE_RATIOS: "+PATHE_RATIOS.toString());
+		}
+
+		if (!window.indexedDB) {
+			window.alert("抱歉，你的瀏覽器無法支援土地公收藏架。敬請使用其他瀏覽器。");
+			
+		}else{
+			//window.alert("瀏覽器通過測試。");
+			loadJson();
+			
+		}
+		async function loadJson() {
+		  const requestURL = 'jsonship.json';
+		  const request = new Request(requestURL);
+		  const response = await fetch(request);
+		  const jsonship = await response.json();
+		  //console.log(jsonship);
+		  openDb(jsonship);
+		}
+
+
+		function openDb(jsonship) {
+			var req = indexedDB.open(DB_NAME, DB_VERSION);
+			req.onsuccess = function (evt) {
+				db = this.result;
+				//var transaction = db.transaction(DB_STORE_NAME, 'readonly');
+				//var objectStore = transaction.objectStore(DB_STORE_NAME);
+				var transaction = db.transaction(DB_STORE_NAME, 'readwrite');
+				var objectStore = transaction.objectStore(DB_STORE_NAME);
+				for (i = 0; i < jsonship.jsonship.length; i++) { 
+					//console.log(jsonship.jsonship[i]);
+					objectStore.put(jsonship.jsonship[i]);
+				}
+				getMaxMinNumber();
+				createjs.Ticker.timingMode = createjs.Ticker.RAF;
+				createjs.Ticker.on("tick", tick);
+				
+			};
+			req.onerror = function (evt) {
+			  console.error("openDb:", evt.target.errorCode);
+			};
+
+			req.onupgradeneeded = function (evt) {
+				var objectStore = evt.target.result.createObjectStore(DB_STORE_NAME, {autoIncrement: true});
+				objectStore.createIndex(DB_INDEX, DB_INDEX, { unique: false });
+				objectStore.createIndex("id", "id", { unique: true });
+			};
+		}
+		
+		/*
+		shiparray.push(shipsvg);
+		shiparray.push(shipsvg2);
+		//shipsvg.image = ship;
+		
+		//stageY = ;
+		stage.addChild(bitmap);
+		stage.addChild(shipsvg);
+		stage.addChild(shipsvg2);
+		getFixScale(shipsvg, SHIP_TO_CANVAS_RATIO);
+		getFixScale(shipsvg2, SHIP_TO_CANVAS_RATIO);
+		shipsvg.regX = 122;
+		shipsvg.regY = 112;
+		shipsvg2.regX = 122;
+		shipsvg2.regY = 112;
+		*/
+
+		
+				//shipsvg.x = MACAU.x;
+		//shipsvg.y = MACAU.y;
+		//stage.update();	
+		//handleResize();
+		canvas.addEventListener("mousewheel", MouseWheelHandler, false);
+		canvas.addEventListener("DOMMouseScroll", MouseWheelHandler, false);
+
+		
+		function tick(event) {
+		  stage.update(event);		  
+		}
+		window.addEventListener("resize", handleResize, false);
+		
+		function handleResize(event) {
+				  var w = window.innerWidth,
+					  h = window.innerHeight;
+				  var pos = 0;
+				  stage.canvas.width = w;
+				  stage.canvas.height = h;
+				  
+				  //var pos = tween ? tween.rawPosition : 0;//如果tween是true, pos 會等於tween.rawPosition，否則會等於０。　？是條件 (三元) 運算子
+				  //var pos2 = tween2 ? tween2.rawPosition : 0;
+				  //createjs.Tween.removeTweens(shipsvg);
+				  //createjs.Tween.removeTweens(shipsvg2);
+				  // Make a new path using the width/height ratios
+				  pathe.length = 0;
+				  pathw1.length = 0;
+				  pathw2.length = 0;
+				  
+				for (var i=0; i<PATHE_RATIOS.length; i+=2) {
+					pathe.push(
+					  PATHE_RATIOS[i] * image.width * bitmap.scaleX,
+					  PATHE_RATIOS[i+1] * image.height * bitmap.scaleY,
+					  
+					);    
+				}
+				for (var i=0; i<PATHW1_RATIOS.length; i+=2) {
+					pathw1.push(
+					  PATHW1_RATIOS[i] * image.width * bitmap.scaleX,
+					  PATHW1_RATIOS[i+1] * image.height * bitmap.scaleY,
+					  
+					);    
+				}
+				for (var i=0 ; i<PATHW2_RATIOS.length; i+=2) {
+					pathw2.push(
+					  PATHW2_RATIOS[i] * image.width * bitmap.scaleX,
+					  PATHW2_RATIOS[i+1] * image.height * bitmap.scaleY,
+					  
+					);    
+				}
+				//console.log("PATHE_RATIOS: "+PATHE_RATIOS.toString());
+				//console.log("image.width: "+image.width);
+				//console.log("bitmap.scaleX: "+bitmap.scaleX);
+				//console.log("bitmap.scaleY: "+bitmap.scaleY);
+				//console.log("pathe: "+ pathe.toString());
+				for (var i=0; i<shiparray.length; i++){
+					createjs.Tween.removeTweens(shiparray[i].shipsvg);
+					shiparray[i].shipsvg.rotation = 0;
+					
+					var pos = shiparray[i].tween ? shiparray[i].tween.rawPosition : 0;
+					var month = shiparray[i].month ? shiparray[i].month*monthTime : 0;
+					var journeyTimeE = monthTime*4;
+					if(shiparray[i].month<=3 || shiparray[i].month>=10){
+						var journeyTimeW = monthTime*4.9 / 2;
+					}else{
+						var journeyTimeW = monthTime*6 / 2;
+					}
+					switch(shiparray[i].destination){
+						case "哈瓦那":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).wait(month).to({guide: {path: pathw1}},journeyTimeW).to({guide: {path: pathw2}},journeyTimeW).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
+						case "卡亞俄":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).wait(month).to({guide: {path: pathe, orient: "auto"}},journeyTimeE).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
+						default:
+							break;
+					}
+					 
+					//shiparray[i][1] = 
+				}
+			 //shipsvg.rotation = 0;
+			 //shipsvg2.rotation = 0;
+			// tween = createjs.Tween.get(shipsvg).to({guide: {path: pathe, orient: "auto"}},10000);
+			 //tween2 = createjs.Tween.get(shipsvg2).to({guide: {path: pathw1}},10000).to({guide: {path: pathw2}},10000);
+			 //tween.setPosition(pos);
+			 //tween2.setPosition(pos2);
+			 
+		 }
+		 function arrival(counterNum, obj){
+			console.log("arrival: "+counterNum);
+			for(let i=0; i<shiparray.length;i++){
+				if(counterNum == shiparray[i].counter){
+				
+					stage.removeChild(shiparray[i].shipsvg);
+					shiparray.splice(i, 1);
+					console.log("shiparray.length: "+shiparray.length);
+					break;
+				}
+			}
+		 }
+		function getFixScale(obj, s){
+			var tmpImg = obj.image;
+			obj.scaleX = s * canvas.width / ( obj.parent.scaleX * tmpImg.width );
+			obj.scaleY = obj.scaleX;
+			console.log("obj.scaleX: "+ obj.scaleX );
+		}
+		function MouseWheelHandler(e) {
+			var local = stage.globalToLocal(stage.mouseX, stage.mouseY);
+			stage.regX=local.x;
+			
+			stage.x=stage.mouseX;
+				
+			
+			if(Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)))>0){
+				
+				zoom=1.1;
+				stage.regY=local.y;
+				stage.y=stage.mouseY;
+			}else{
+				var tmpHeight = image.height*stage.scaleY*bitmap.scaleY*0.9;
+				if(tmpHeight>canvas.height){
+					zoom=0.9;
+					
+						stage.regY=local.y;
+						stage.y=stage.mouseY;
+					
+					
+					
+				}else{
+					zoom=1;
+					stage.y=0;
+					stage.regY=0;
+					//stage.scaleY = bitmap.scaleY;
+				}
+			}
+			stage.scaleX=stage.scaleY*=zoom;
+			for (var i = 0; i < shiparray.length ; i++){
+				//console.log("shiparray: "+shiparray[i]);
+				getFixScale(shiparray[i].shipsvg, SHIP_TO_CANVAS_RATIO);
+			}
+			stage.update();
+			/*console.log("-----------------------");
+			console.log("stage.scaleY: "+stage.scaleY);
+			console.log("canvas.scaleY: "+canvas.scaleY);
+			console.log("bitmap.scaleY: "+bitmap.scaleY);
+			console.log("image.height: "+image.height);
+			console.log("canvas.height: "+canvas.height);
+			console.log("stage.y: "+stage.y);
+			console.log("stage.regY : "+stage.regY );
+			console.log("local.y; : "+local.y );
+			console.log("stage.mouseY; : "+stage.mouseY );*/
+			
+			//stage.y -=local.y*zoom;
+			//stage.x -=local.x*zoom;
+
+
+			//var local = stage.globalToLocal(stage.mouseX, stage.mouseY);
+
+			//stage.update();
+			//console.log("*stage.y: "+stage.y);
+			//console.log("*stage.regY : "+stage.regY );
+			//console.log("*local.y : "+local.y );
+		}
+
+
+		stage.addEventListener("stagemousedown", function(e) {
+
+			//console.log("e.stageX: "+e.stageX);
+			//console.log("e.stageY: "+e.stageY);
+			//console.log("stage.x: "+stage.x);
+			//console.log("stage.y: "+stage.y);
+			//console.log("stage.regY : "+stage.regY );
+			//console.log("stage.mouseY; : "+stage.mouseY );
+			
+			var offset={x:stage.x-e.stageX,y:stage.y-e.stageY};
+			//console.log("offset.x : "+offset.x );
+			//console.log("offset.y : "+offset.y );
+			//var tmppoint =  shiparray[shiparray.length - 1].globalToLocal(e.stageX, e.stageY);
+			//console.log("tmppoint.x : "+tmppoint.x );
+			//console.log("tmppoint.y : "+tmppoint.y );
+			
+			
+			stage.addEventListener("stagemousemove",function(ev) {
+				stage.x = ev.stageX+offset.x;
+				/*if(image.height*stage.scaleY*bitmap.scaleY*0.9>canvas.height){
+					stage.y = ev.stageY+offset.y;
+					
+				}else{
+					stage.y=0;
+				}*/
+				var tmpY = ev.stageY+offset.y;
+				//if(tmpY< 0 && tmpY> canvas.height-image.height*stage.scaleY*bitmap.scaleY){
+					stage.y = tmpY;
+				//}
+				stage.update();
+			});
+			stage.addEventListener("stagemouseup", function(){
+				stage.removeAllEventListeners("stagemousemove");
+			});
+		}); 
+		
+		function getMaxMinNumber (callback) {
+			var tmpOpenReq = indexedDB.open(DB_NAME);
+			tmpOpenReq.onsuccess = function() {
+				var tmpDb = tmpOpenReq.result;
+				var tmpTransaction = tmpDb.transaction(DB_STORE_NAME, 'readonly');
+				var tmpObjectStore = tmpTransaction.objectStore(DB_STORE_NAME);
+				var tmpIndex = tmpObjectStore.index(DB_INDEX);
+				var openCursorRequestMax = tmpIndex.openCursor(null, 'prevunique');
+				var openCursorRequestMin = tmpIndex.openCursor(null, 'nextunique');
+				var maxDB_INDEX = null;
+				var minDB_INDEX = null;
+
+				openCursorRequestMax.onsuccess = function (event) {
+					if (event.target.result) {
+						maxDB_INDEX = event.target.result.value; //the object with max revision
+						console.log("maxDB_INDEX:　"+　maxDB_INDEX.year);
+						range.max = maxDB_INDEX.year;
+					}
+				};
+				openCursorRequestMin.onsuccess = function (event) {
+					if (event.target.result) {
+						minDB_INDEX = event.target.result.value; //the object with max revision
+						console.log("minDB_INDEX:　"+　minDB_INDEX.year);
+						range.min = minDB_INDEX.year;
+					}
+				};
+				/*tmpTransaction.oncomplete = function (event) {
+					tmpDb.close();
+					if(callback) //you'll need a calback function to return to your code
+						callback(maxDB_INDEX);
+				};*/
+			}
+		}
+		
+		
+
+		function setValue(){
+			//const newValue = Number( (range.value - range.min) * 100 / (range.max - range.min) );
+			//const newPosition = 10 - (newValue * 0.2);
+			//rangeV.innerHTML = "<span>${range.value}</span>";
+			//yearTextField.style.left = "calc(${newValue}% + (${newPosition}px))";
+			//console.log("range.value for now: "+ range.value);
+			yearTextField.innerHTML = range.value ;
+			var oppArray = ["0.9", "0.8", "0.7", "0.6", "0.5", "0.4", "0.3", "0.2", "0.1", "0"];
+			var tmpX = 0;
+			yearTextField.style.visibility = "visible";
+			range.removeEventListener('input', setValue);
+			(function next() {
+				yearTextField.style.opacity = oppArray[tmpX];
+				if(++tmpX < oppArray.length) {
+					timeoutID = setTimeout(next, 100); //depending on how fast you want to fade
+				}else{
+					var tmpOpenReq = indexedDB.open(DB_NAME);
+						tmpOpenReq.onsuccess = function() {
+							var tmpDb = tmpOpenReq.result;
+							var tmpTransaction = tmpDb.transaction(DB_STORE_NAME, 'readonly');
+							var tmpObjectStore = tmpTransaction.objectStore(DB_STORE_NAME);
+							var tmpIndex = tmpObjectStore.index(DB_INDEX);
+							const keyRng = IDBKeyRange.only(range.value);
+							//var getRequest = tmpIndex.get(range.value);
+							const getRequest = tmpIndex.openCursor(keyRng);
+							//var tmpCounter = 0;
+							getRequest.onsuccess = function() {
+								var cursor = event.target.result;
+								
+								//console.log(getRequest.result);
+								if(cursor) {
+									//console.log("cursor: "+ cursor);
+									//tmpCounter ++;
+									console.log("cursor.value.year: "+ cursor.value.year);
+									cursor.value.shipsvg = new createjs.Bitmap(ship);
+									cursor.value.counter = counter;
+									counter++;
+
+									//console.log("cursor.shipsvg: "+ cursor.shipsvg);
+									stage.addChild(cursor.value.shipsvg);
+									
+									getFixScale(cursor.value.shipsvg, SHIP_TO_CANVAS_RATIO);
+									
+									cursor.value.shipsvg.regX = 122;
+									cursor.value.shipsvg.regY = 112;
+									shiparray.push(cursor.value);
+									
+									cursor.continue();
+								} else {
+									console.log('Entries all displayed. ' );
+									//tmpCounter = 0;
+									//console.log("shiparray.toString(): "+ shiparray.toString());
+									handleResize();
+								}
+							}
+
+							/*tmpIndex.openCursor().onsuccess = function(event) {
+								var cursor = event.target.result;
+								if(cursor) {
+									console.log("cursor: "+ cursor);
+									console.log("cursor.year: "+ cursor.year);
+									cursor.shipsvg = new createjs.Bitmap(ship);
+									//console.log("cursor.shipsvg: "+ cursor.shipsvg);
+									stage.addChild(cursor.shipsvg);
+									
+									getFixScale(cursor.shipsvg, SHIP_TO_CANVAS_RATIO);
+									
+									cursor.shipsvg.regX = 122;
+									cursor.shipsvg.regY = 112;
+									shiparray.push(cursor);
+									
+									cursor.continue();
+								} else {
+									console.log('Entries all displayed.');
+									//console.log("shiparray.toString(): "+ shiparray.toString());
+									handleResize();
+								}
+							};*/
+						}
+					yearTextField.style.visibility = "hidden";
+					if(yearTextField.innerHTML == range.value){
+						range.addEventListener('input', setValue);
+					}else{
+						setValue();
+					}
+				}
+			})();
+		};
+		
+
+		document.addEventListener("DOMContentLoaded", setValue);
+		range.addEventListener('input', setValue);
+	}
+      
+	
+      
+</script>
+	<canvas id="myCanvas" style="background-color:white;" >不支援</canvas>
+	<div>
+	<img style="display: none;" border="0" src="http://www.kingchigames.com/Games/earthgodjpg.jpg"  />
+		<h1>澳門土地公位置圖(高德地圖版本)</h1>
+		<p>高德地圖版本的土地公位置圖受流量限制和內地加密定位的影響，每天的使用次數會有所限制，定位誤差稍大。	
+		</p>
+	</div>
+	<div>
+
+	
+		<div id = "yearTextField"></div>
+		<input id="range" type="range" step="1">
+	
+		
+		
+		
+		<p>by inaciso 2022</p>
+	</div>
+</body>
+</html>
