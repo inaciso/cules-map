@@ -278,8 +278,13 @@
 		//barcaone.src = "barca1.png"
 		function handleImageLoad(){
 			bitmap = new createjs.Bitmap(image);
-			bitmap.scaleX = canvas.width/image.width;
-			bitmap.scaleY = bitmap.scaleX;
+			if(canvas.width>canvas.height){
+				bitmap.scaleX = canvas.width/image.width;
+				bitmap.scaleY = bitmap.scaleX;
+			}else{
+				bitmap.scaleY = canvas.height/image.height;
+				bitmap.scaleX = bitmap.scaleY;
+			}
 			stage.addChild(bitmap);
 			stage.update();
 			//var shipsvg = new createjs.Bitmap(ship);
@@ -1182,10 +1187,7 @@
 </script>
 	<canvas id="myCanvas" style="background-color:white;" >不支援</canvas>
 	<div>
-	<img style="display: none;" border="0" src="http://www.kingchigames.com/Games/earthgodjpg.jpg"  />
-		<h1>澳門土地公位置圖(高德地圖版本)</h1>
-		<p>高德地圖版本的土地公位置圖受流量限制和內地加密定位的影響，每天的使用次數會有所限制，定位誤差稍大。	
-		</p>
+	
 	</div>
 	<div>
 
