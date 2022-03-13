@@ -3,6 +3,7 @@
 
 <head>
 	<meta charset="utf-8">
+	<meta name='viewport' content='width=device-width, height=device-height,  user-scalable=no' />
 	<style>
 		body {
 
@@ -203,7 +204,7 @@
 		const range = document.getElementById("range");
 		const yearTextField = document.getElementById("yearTextField");
 		const monthTime = 1000;
-		var zoom;
+		//var zoom;
 		var pathe = [];
 		var pathw1 = [];
 		var pathw2 = [];
@@ -547,52 +548,153 @@
 		//shipsvg.y = MACAU.y;
 		//stage.update();	
 		//handleResize();
-		createjs.Touch.enable(stage);
+		//createjs.Touch.enable(stage);
 		canvas.addEventListener("mousewheel", MouseWheelHandler, false);
 		canvas.addEventListener("DOMMouseScroll", MouseWheelHandler, false);
-		
-		window.addEventListener("resize", handleResize, false);
-		stage.addEventListener("stagemousedown", function(e) {
-			if (e.pointerID == 0 || e.pointerID == -1) { //touch 1 or mouse
-				var offset={x:stage.x-e.stageX,y:stage.y-e.stageY};
-				var touch1 = new createjs.Point(stage.globalToLocal(e.stageX, 0).x, stage.globalToLocal(0, e.stageY).y);
-			}else if(e.pointerID == 1) { //touch 2
-				var touch2 = new createjs.Point(stage.globalToLocal(e.stageX, 0).x, stage.globalToLocal(0, e.stageY).y);
-				var offset2={x:stage.x-e.stageX,y:stage.y-e.stageY};
+
+		function MouseWheelHandler(e) {
+			const { ctrlKey } = e
+			if (ctrlKey) {
+				e.preventDefault();
 			}
-			stage.addEventListener("stagemousemove",function(ev) {
-				if(ev.pointerID == 0 || ev.pointerID == -1) { //touch 1 or mouse
-					var touch = touch1;
+			if(Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)))>0){
+				var zoom = 1.1;
+				
+			}else{
+				var zoom = 0.9;
+				
+			}
+			doZoom(zoom);
+		}
+		function doZoom(zoom){
+			var local = stage.globalToLocal(stage.mouseX, stage.mouseY);
+			stage.regX=local.x;
+			
+			stage.x=stage.mouseX;
+				
+			
+			if(zoom>1){
+				
+				
+				stage.regY=local.y;
+				stage.y=stage.mouseY;
+			}else{
+				var tmpHeight = image.height*stage.scaleY*bitmap.scaleY*0.9;
+				if(tmpHeight>canvas.height){
+									
+						stage.regY=local.y;
+						stage.y=stage.mouseY;
+							
+					
+				}else{
+					zoom=1;
+					stage.y=0;
+					stage.regY=0;
+					//stage.scaleY = bitmap.scaleY;
+				}
+			}
+			stage.scaleX=stage.scaleY*=zoom;
+			for (var i = 0; i < shiparray.length ; i++){
+				//console.log("shiparray: "+shiparray[i]);
+				getFixScale(shiparray[i].shipsvg, SHIP_TO_CANVAS_RATIO);
+			}
+			stage.update();
+		}
+		function getFixScale(obj, s){
+			var tmpImg = obj.getChildAt(0).image;
+			obj.scaleX = s * canvas.width / ( obj.parent.scaleX * tmpImg.width );
+			obj.scaleY = obj.scaleX;
+			console.log("obj.scaleX: "+ obj.scaleX );
+		}
+		canvas.addEventListener("pointerdown", function(e){
+			evCache.push(e);
+			var p = stage.globalToLocal(stage.mouseX, stage.mouseY);
+			
+			var offset={x:stage.x-p.x,y:stage.y-p.y};	
+			console.log("pointerDown", e);
+			console.log("stage.x: " + stage.x+", "+"stage.y: " + stage.y);
+			console.log("p.x: " + p.x+", "+"p.y: " + p.y);
+			canvas.addEventListener("pointerup",pointerup_handler);
+			canvas.addEventListener("pointercancel",pointerup_handler);
+			canvas.addEventListener("pointerleave",pointerup_handler);
+			canvas.addEventListener("pointerout",pointerup_handler);
+			canvas.addEventListener("pointermove", pointermove_handler);
+			function pointermove_handler(ev){
+				 console.log("pointerMove", ev);
+				 // Find this event in the cache and update its record with this event
+				 for (var i = 0; i < evCache.length; i++) {
+				   if (ev.pointerId == evCache[i].pointerId) {
+					  evCache[i] = ev;
+				   break;
+				   }
+				 }
+
+				 // If two pointers are down, check for pinch gestures
+				 if (evCache.length == 2) {
+				   // Calculate the distance between the two pointers
+				   var curDiff = Math.abs(evCache[0].clientX - evCache[1].clientX);
+					var zoom = curDiff/prevDiff;
+				   if (prevDiff > 0) {
+					doZoom(zoom);
+					 /*if (curDiff > prevDiff) {
+					   // The distance between the two pointers has increased
+					   console.log("Pinch moving OUT -> Zoom in", ev);
+					   ev.preventDefault();
+						
+					 }
+					 if (curDiff < prevDiff) {
+						ev.preventDefault();
+					   // The distance between the two pointers has decreased
+					   console.log("Pinch moving IN -> Zoom out",ev);
+
+					 }*/
+				   }
+
+				   // Cache the distance for the next move event
+				   prevDiff = curDiff;
+				 }else{
+					ev.preventDefault();
+					var tmpP = stage.globalToLocal(stage.mouseX, stage.mouseY);
+					stage.x = tmpP.x+offset.x;
+					var tmpY = tmpP.y+offset.y;
+					stage.y = tmpY;
+					stage.update();	
+				 }
+			 }
+			function pointerup_handler(ev) {
+			  //console.log(ev.type, ev);
+			  canvas.removeEventListener("pointermove", pointermove_handler);
+			  // Remove this pointer from the cache and reset the target's
+				
+				for (var i = 0; i < evCache.length; i++) {
+				   if (evCache[i].pointerId == ev.pointerId) {
+					 evCache.splice(i, 1);
+					 break;
+				   }
+				 }
+
+
+			  // If the number of pointers down is less than two then reset diff tracker
+			  if (evCache.length < 2) {
+				prevDiff = -1;
+			  }
+			}
+			
+		});
+		window.addEventListener("resize", handleResize, false);
+		/*stage.addEventListener("stagemousedown", function(e) {			
+				var offset={x:stage.x-e.stageX,y:stage.y-e.stageY};			
+			stage.addEventListener("stagemousemove",function(ev) {			
 					stage.x = ev.stageX+offset.x;
 					var tmpY = ev.stageY+offset.y;
 					stage.y = tmpY;
-					stage.update();
-				}else if(ev.pointerID == 1) { //touch 2
-					var touch = offset2;
-				}
-				var dX = stage.globalToLocal(ev.stageX, 0).x - touch.x;
-				var dY = stage.globalToLocal(0, ev.stageY).y - touch.y;
-
-				if (touch1 && touch2) var oldDist = distanceP(touch1, touch2);
-
-					touch.x += dX;
-					touch.y += dY;
-
-			//if both fingers are used zoom and move the canvas
-			if (touch1 && touch2) {
-				var newDist = distanceP(touch1, touch2);
-				var newZoom = zoom * newDist / oldDist;
-				zoomMap(newZoom, new createjs.Point((touch1.x+touch2.x)/2, (touch1.y + touch2.y)/2))
-
-				//if both fingers are used apply only half of the motion to each of them
-				dX /= 2;
-				dY /= 2;
-			}
+					stage.update();				
 			});
-			stage.addEventListener("stagemouseup", function(){
+			stage.addEventListener("stagemouseup", function(){				
 				stage.removeAllEventListeners("stagemousemove");
+
 			});
-		}); 
+		}); */
 		
 		
 		
@@ -807,70 +909,7 @@
 			array.shipbitmap.alpha = 0;
 			array.shipsvg.addChild(array.casebitmap);
 		 }
-		function getFixScale(obj, s){
-			var tmpImg = obj.getChildAt(0).image;
-			obj.scaleX = s * canvas.width / ( obj.parent.scaleX * tmpImg.width );
-			obj.scaleY = obj.scaleX;
-			console.log("obj.scaleX: "+ obj.scaleX );
-		}
-		function MouseWheelHandler(e) {
-			var local = stage.globalToLocal(stage.mouseX, stage.mouseY);
-			stage.regX=local.x;
-			
-			stage.x=stage.mouseX;
-				
-			
-			if(Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)))>0){
-				
-				zoom=1.1;
-				stage.regY=local.y;
-				stage.y=stage.mouseY;
-			}else{
-				var tmpHeight = image.height*stage.scaleY*bitmap.scaleY*0.9;
-				if(tmpHeight>canvas.height){
-					zoom=0.9;
-					
-						stage.regY=local.y;
-						stage.y=stage.mouseY;
-					
-					
-					
-				}else{
-					zoom=1;
-					stage.y=0;
-					stage.regY=0;
-					//stage.scaleY = bitmap.scaleY;
-				}
-			}
-			stage.scaleX=stage.scaleY*=zoom;
-			for (var i = 0; i < shiparray.length ; i++){
-				//console.log("shiparray: "+shiparray[i]);
-				getFixScale(shiparray[i].shipsvg, SHIP_TO_CANVAS_RATIO);
-			}
-			stage.update();
-			/*console.log("-----------------------");
-			console.log("stage.scaleY: "+stage.scaleY);
-			console.log("canvas.scaleY: "+canvas.scaleY);
-			console.log("bitmap.scaleY: "+bitmap.scaleY);
-			console.log("image.height: "+image.height);
-			console.log("canvas.height: "+canvas.height);
-			console.log("stage.y: "+stage.y);
-			console.log("stage.regY : "+stage.regY );
-			console.log("local.y; : "+local.y );
-			console.log("stage.mouseY; : "+stage.mouseY );*/
-			
-			//stage.y -=local.y*zoom;
-			//stage.x -=local.x*zoom;
-
-
-			//var local = stage.globalToLocal(stage.mouseX, stage.mouseY);
-
-			//stage.update();
-			//console.log("*stage.y: "+stage.y);
-			//console.log("*stage.regY : "+stage.regY );
-			//console.log("*local.y : "+local.y );
-		}
-
+		
 
 		
 		
