@@ -57,7 +57,7 @@
 			text-align: center;
 			color: gray;
 			opacity: 0.7;
-			font-size: 70vh;
+			font-size: 30vw;
 			z-index: 998;
 			user-select: none;
 			-moz-user-select: none;
@@ -173,7 +173,7 @@
 		const DB_VERSION =1;
 		const DB_STORE_NAME = "journeys";
 		const DB_INDEX = "year";
-		const SHIP_TO_CANVAS_RATIO = 0.05;
+		const SHIP_TO_CANVAS_RATIO = 0.1;
     	const MACAU = {x: 1102, y: 2357};
 		const TAIWAN_STRAIT = {x: 1242,y:2289};
 		const JAPANSEA = {x: 1392,y:2280};
@@ -202,7 +202,7 @@
 		const ADELAIDE = {x: 1592, y:3631};
 		const range = document.getElementById("range");
 		const yearTextField = document.getElementById("yearTextField");
-		const monthTime = 2000;
+		const monthTime = 1000;
 		var zoom;
 		var pathe = [];
 		var pathw1 = [];
@@ -223,6 +223,7 @@
 		var pathunknown = [];
 		var pathbelawan = [];
 		var pathag = [];
+		var pathsinkscs = [];
 		
 		var PATHE_RATIOS =[];
 		var PATHW1_RATIOS=[];
@@ -243,6 +244,8 @@
 		var PATHRETURNMACAU_RATIOS=[];
 		var PATHBELAWAN_RATIOS=[];
 		var PATHAG_RATIOS=[];
+		var PATHSINKSCS=[];
+		var PATHALL=[];
 		
 		var bitmap;
 		var canvas= document.getElementById("myCanvas");
@@ -263,6 +266,7 @@
 		var fire = new Image();
 		var plaque = new Image();
 		var fist = new Image();
+		var sinkship = new Image();
 		//var barcaone = new Image();
 		ship.src = "ship.png";
 		barca.src = "barca.png";
@@ -275,17 +279,27 @@
 		plaque.src ="plaque.png";
 		fist.src = "fist.png";
 		casetwo.src = "case2.png";
+		sinkship.src = "sinkship.png";
+		
+		var settingValue = false;
+		var evCache = new Array();//用於手勢放大
+		var prevDiff = -1;
 		//barcaone.src = "barca1.png"
 		function handleImageLoad(){
 			bitmap = new createjs.Bitmap(image);
-			bitmap.scaleX = canvas.width/image.width;
-			bitmap.scaleY = bitmap.scaleX;
+			if(canvas.width>canvas.height){
+				bitmap.scaleX = canvas.width/image.width;
+				bitmap.scaleY = bitmap.scaleX;
+			}else{
+				bitmap.scaleY = canvas.height/image.height;
+				bitmap.scaleX = bitmap.scaleY;
+			}
 			stage.addChild(bitmap);
 			stage.update();
 			//var shipsvg = new createjs.Bitmap(ship);
 			//var shipsvg2 = new createjs.Bitmap(ship);
 			
-			PATHE_RATIOS = [
+			PATHALL.push([ //PATHALL[0]：去卡亞俄
 			  MACAU.x/image.width, MACAU.y/image.height,
 			  
 			  TAIWAN_STRAIT.x/image.width, TAIWAN_STRAIT.y/image.height,
@@ -293,8 +307,8 @@
 			  
 				HAWAI.x/image.width, HAWAI.y/image.height,
 			  COLLAO.x/image.width, COLLAO.y/image.height,
-			];
-			PATHW1_RATIOS = [
+			]);
+			PATHALL.push([//PATHALL[1]：去哈瓦那第一程
 			  MACAU.x/image.width, MACAU.y/image.height,
 			  KWIN_NYON.x/image.width, KWIN_NYON.y/image.height,
 			  SOUTH_CHINA_SEA.x/image.width, SOUTH_CHINA_SEA.y/image.height,
@@ -304,8 +318,8 @@
 			  COLOMBA.x/image.width, COLOMBA.y/image.height,
 			  INDIAN_OCEAN1.x/image.width, INDIAN_OCEAN1.y/image.height,
 			  INDIAN_OCEAN2.x/image.width, INDIAN_OCEAN2.y/image.height,
-			];
-			PATHW2_RATIOS = [
+			]);
+			PATHALL.push([//PATHALL[2]：去哈瓦那第二程
 			  INDIAN_OCEAN3.x/image.width, INDIAN_OCEAN3.y/image.height,
 			  NATAL.x/image.width, NATAL.y/image.height,
 			  GEORGE.x/image.width, GEORGE.y/image.height,
@@ -317,22 +331,22 @@
 			  CARIBBEAN_SEA1.x/image.width, CARIBBEAN_SEA1.y/image.height,
 			  CARIBBEAN_SEA2.x/image.width, CARIBBEAN_SEA2.y/image.height,
 			  HAVANA.x/image.width, HAVANA.y/image.height,
-			];
-			PATHSF_RATIOS = [
+			]);
+			PATHALL.push([//PATHALL[3]：去舊金山
 				MACAU.x/image.width, MACAU.y/image.height,
 			  
 				TAIWAN_STRAIT.x/image.width, TAIWAN_STRAIT.y/image.height,
 				
 				SANFRANCISCO.x/image.width, SANFRANCISCO.y/image.height,
-			];
-			PATHAD_RATIOS=[
+			]);
+			PATHALL.push([//PATHALL[4]：去阿德雷德
 				MACAU.x/image.width, MACAU.y/image.height,
 				1262/image.width, 2403/image.height,
 				1930/image.width, 3741/image.height,
 				1608/image.width, 3685/image.height,
 				ADELAIDE.x/image.width, ADELAIDE.y/image.height,
-				];
-			PATHPG_RATIOS=[
+			]);
+			PATHALL.push([//PATHALL[5]：去檳城
 				MACAU.x/image.width, MACAU.y/image.height,
 				KWIN_NYON.x/image.width, KWIN_NYON.y/image.height,
 				SOUTH_CHINA_SEA.x/image.width, SOUTH_CHINA_SEA.y/image.height,
@@ -340,13 +354,13 @@
 				MALACCA_STRAIT.x/image.width, MALACCA_STRAIT.y/image.height,
 				PENANG.x/image.width, PENANG.y/image.height,
 				786/image.width, 2652/image.height,
-			];
-			PATHMB_RATIOS=[
+			]);
+			PATHALL.push([//PATHALL[6]：去莫桑比克,只寫了第二段
 				INDIAN_OCEAN3.x/image.width, INDIAN_OCEAN3.y/image.height,
 				7014/image.width, 3405/image.height,
 				6875/image.width, 3218/image.height,
-			];
-			PATHSN_RATIOS=[
+			]);
+			PATHALL.push([//PATHALL[7]：去蘇利南,只寫了第二段
 				INDIAN_OCEAN3.x/image.width, INDIAN_OCEAN3.y/image.height,
 				NATAL.x/image.width, NATAL.y/image.height,
 				GEORGE.x/image.width, GEORGE.y/image.height,
@@ -354,27 +368,27 @@
 				ATLANTIC_OCEAN1.x/image.width, ATLANTIC_OCEAN1.y/image.height,
 				BAIA.x/image.width, BAIA.y/image.height,				
 				4780/image.width, 2605/image.height,
-			];
-			PATHJV_RATIOS=[
+			]);
+			PATHALL.push([//PATHALL[8]：去爪哇
 				MACAU.x/image.width, MACAU.y/image.height,
 				KWIN_NYON.x/image.width, KWIN_NYON.y/image.height,
 				SOUTH_CHINA_SEA.x/image.width, SOUTH_CHINA_SEA.y/image.height,
 				SINGAPORE.x/image.width, SINGAPORE.y/image.height,
 				1031/image.width, 2951/image.height,
-			];
-			PATHSG_RATIOS=[
+			]);
+			PATHALL.push([//PATHALL[9]：去新加坡
 				MACAU.x/image.width, MACAU.y/image.height,
 				KWIN_NYON.x/image.width, KWIN_NYON.y/image.height,
 				SOUTH_CHINA_SEA.x/image.width, SOUTH_CHINA_SEA.y/image.height,
 				SINGAPORE.x/image.width, SINGAPORE.y/image.height,
 				911/image.width, 2803/image.height,
-			];
-			PATHML_RATIOS=[
+			]);
+			PATHALL.push([//PATHALL[10]：去馬尼拉
 				MACAU.x/image.width, MACAU.y/image.height,
 				1133/image.width, 2448/image.height,
 				1225/image.width, 2531/image.height,
-			];
-			PATHGOA_RATIOS=[
+			]);
+			PATHALL.push([//PATHALL[11]：去果亞
 				MACAU.x/image.width, MACAU.y/image.height,
 				KWIN_NYON.x/image.width, KWIN_NYON.y/image.height,
 				SOUTH_CHINA_SEA.x/image.width, SOUTH_CHINA_SEA.y/image.height,
@@ -384,8 +398,8 @@
 				COLOMBA.x/image.width, COLOMBA.y/image.height,
 				265/image.width, 2598/image.height,
 				265/image.width, 2497/image.height,
-			];
-			PATHCL_RATIOS=[
+			]);
+			PATHALL.push([//PATHALL[12]：去詩蘭
 				MACAU.x/image.width, MACAU.y/image.height,
 				KWIN_NYON.x/image.width, KWIN_NYON.y/image.height,
 				SOUTH_CHINA_SEA.x/image.width, SOUTH_CHINA_SEA.y/image.height,
@@ -393,13 +407,13 @@
 				MALACCA_STRAIT.x/image.width, MALACCA_STRAIT.y/image.height,
 				PENANG.x/image.width, PENANG.y/image.height,
 				COLOMBA.x/image.width, COLOMBA.y/image.height,
-			];
-			PATHSAIGON_RATIOS=[
+			]);
+			PATHALL.push([//PATHALL[13]：去西貢
 				MACAU.x/image.width, MACAU.y/image.height,
 				1058/image.width, 2557/image.height,
 				1008/image.width, 2606/image.height,
-			];
-			PATHCR_RATIOS = [
+			]);
+			PATHALL.push([//PATHALL[14]：去哥斯達黎加
 			  MACAU.x/image.width, MACAU.y/image.height,
 			  
 			  TAIWAN_STRAIT.x/image.width, TAIWAN_STRAIT.y/image.height,
@@ -407,13 +421,13 @@
 			  
 				HAWAI.x/image.width, HAWAI.y/image.height,
 			  4413/image.width, 2641/image.height,
-			];
-			PATHUNKNOWN_RATIOS=[
+			]);
+			PATHALL.push([//PATHALL[15]：去未知地方
 				MACAU.x/image.width, MACAU.y/image.height,
-				1142/image.width, 2404/image.height,
-				1119/image.width, 2434/image.height,
-			];
-			PATHRETURNMACAU_RATIOS=[
+				1272/image.width, 2415/image.height,
+				1573/image.width, 2476/image.height,
+			]);
+			PATHALL.push([//PATHALL[16]：折返澳門
 				MACAU.x/image.width, MACAU.y/image.height,
 				1226/image.width, 2361/image.height,
 				1204/image.width, 2452/image.height,
@@ -421,8 +435,8 @@
 				1061/image.width, 2432/image.height,
 				1072/image.width, 2383/image.height,
 				MACAU.x/image.width, MACAU.y/image.height,
-			];
-			PATHBELAWAN_RATIOS=[
+			]);
+			PATHALL.push([//PATHALL[17]：不老灣
 				MACAU.x/image.width, MACAU.y/image.height,
 				KWIN_NYON.x/image.width, KWIN_NYON.y/image.height,
 				SOUTH_CHINA_SEA.x/image.width, SOUTH_CHINA_SEA.y/image.height,
@@ -430,13 +444,19 @@
 				MALACCA_STRAIT.x/image.width, MALACCA_STRAIT.y/image.height,
 				PENANG.x/image.width, PENANG.y/image.height,
 				801/image.width,  2745/image.height,
-			];
-			PATHAG_RATIOS=[
+			]);
+			PATHALL.push([//PATHALL[18]：安直港
 				1031/image.width, 2951/image.height,
 				612/image.width,  3030/image.height,
 				INDIAN_OCEAN2.x/image.width, INDIAN_OCEAN2.y/image.height,
-			];
-		//console.log("PATHE_RATIOS: "+PATHE_RATIOS.toString());
+			]);
+			PATHALL.push([//PATHALL[19]：南中國海沉沒
+				MACAU.x/image.width, MACAU.y/image.height,
+				1089/image.width, 2951/image.height,
+				1131/image.width, 2567/image.height,
+			]);
+			
+			//console.log("PATHE_RATIOS: "+PATHE_RATIOS.toString());
 		}
 
 		if (!window.indexedDB) {
@@ -527,15 +547,58 @@
 		//shipsvg.y = MACAU.y;
 		//stage.update();	
 		//handleResize();
+		createjs.Touch.enable(stage);
 		canvas.addEventListener("mousewheel", MouseWheelHandler, false);
 		canvas.addEventListener("DOMMouseScroll", MouseWheelHandler, false);
+		
+		window.addEventListener("resize", handleResize, false);
+		stage.addEventListener("stagemousedown", function(e) {
+			if (e.pointerID == 0 || e.pointerID == -1) { //touch 1 or mouse
+				var offset={x:stage.x-e.stageX,y:stage.y-e.stageY};
+				var touch1 = new createjs.Point(stage.globalToLocal(e.stageX, 0).x, stage.globalToLocal(0, e.stageY).y);
+			}else if(e.pointerID == 1) { //touch 2
+				var touch2 = new createjs.Point(stage.globalToLocal(e.stageX, 0).x, stage.globalToLocal(0, e.stageY).y);
+				var offset2={x:stage.x-e.stageX,y:stage.y-e.stageY};
+			}
+			stage.addEventListener("stagemousemove",function(ev) {
+				if(ev.pointerID == 0 || ev.pointerID == -1) { //touch 1 or mouse
+					var touch = touch1;
+					stage.x = ev.stageX+offset.x;
+					var tmpY = ev.stageY+offset.y;
+					stage.y = tmpY;
+					stage.update();
+				}else if(ev.pointerID == 1) { //touch 2
+					var touch = offset2;
+				}
+				var dX = stage.globalToLocal(ev.stageX, 0).x - touch.x;
+				var dY = stage.globalToLocal(0, ev.stageY).y - touch.y;
 
+				if (touch1 && touch2) var oldDist = distanceP(touch1, touch2);
+
+					touch.x += dX;
+					touch.y += dY;
+
+			//if both fingers are used zoom and move the canvas
+			if (touch1 && touch2) {
+				var newDist = distanceP(touch1, touch2);
+				var newZoom = zoom * newDist / oldDist;
+				zoomMap(newZoom, new createjs.Point((touch1.x+touch2.x)/2, (touch1.y + touch2.y)/2))
+
+				//if both fingers are used apply only half of the motion to each of them
+				dX /= 2;
+				dY /= 2;
+			}
+			});
+			stage.addEventListener("stagemouseup", function(){
+				stage.removeAllEventListeners("stagemousemove");
+			});
+		}); 
+		
+		
 		
 		function tick(event) {
 		  stage.update(event);		  
 		}
-		window.addEventListener("resize", handleResize, false);
-		
 		function handleResize(event) {
 				  var w = window.innerWidth,
 					  h = window.innerHeight;
@@ -548,7 +611,7 @@
 				  //createjs.Tween.removeTweens(shipsvg);
 				  //createjs.Tween.removeTweens(shipsvg2);
 				  // Make a new path using the width/height ratios
-				  pathe.length = 0;
+				  /*pathe.length = 0;
 				  pathw1.length = 0;
 				  pathw2.length = 0;
 				  pathsf.length = 0;
@@ -566,122 +629,27 @@
 				   pathunknown.length=0;
 				   pathreturnmacau.length=0;
 				   pathbelawan.length=0;
-				   pathag.length=0;
-				   
-				for (var i=0; i<PATHE_RATIOS.length; i+=2) {
-					pathe.push(
-					  PATHE_RATIOS[i] * image.width * bitmap.scaleX,
-					  PATHE_RATIOS[i+1] * image.height * bitmap.scaleY,					  
-					);    
-				}
-				for (var i=0; i<PATHW1_RATIOS.length; i+=2) {
-					pathw1.push(
-					  PATHW1_RATIOS[i] * image.width * bitmap.scaleX,
-					  PATHW1_RATIOS[i+1] * image.height * bitmap.scaleY,					  
-					);    
-				}
-				for (var i=0 ; i<PATHW2_RATIOS.length; i+=2) {
-					pathw2.push(
-					  PATHW2_RATIOS[i] * image.width * bitmap.scaleX,
-					  PATHW2_RATIOS[i+1] * image.height * bitmap.scaleY,					  
-					);    
-				}
-				for (var i=0 ; i<PATHSF_RATIOS.length; i+=2) {
-					pathsf.push(
-					  PATHSF_RATIOS[i] * image.width * bitmap.scaleX,
-					  PATHSF_RATIOS[i+1] * image.height * bitmap.scaleY,					  
-					);    
-				}
-				for (var i=0 ; i<PATHAD_RATIOS.length; i+=2) {
-					pathad.push(
-					  PATHAD_RATIOS[i] * image.width * bitmap.scaleX,
-					  PATHAD_RATIOS[i+1] * image.height * bitmap.scaleY,					  
-					);    
-				}
-				for (var i=0 ; i<PATHPG_RATIOS.length; i+=2) {
-					pathpg.push(
-					  PATHPG_RATIOS[i] * image.width * bitmap.scaleX,
-					  PATHPG_RATIOS[i+1] * image.height * bitmap.scaleY,					  
-					);    
-				}
-				for (var i=0 ; i<PATHMB_RATIOS.length; i+=2) {
-					pathmb.push(
-					  PATHMB_RATIOS[i] * image.width * bitmap.scaleX,
-					  PATHMB_RATIOS[i+1] * image.height * bitmap.scaleY,					  
-					);    
-				}
-				for (var i=0 ; i<PATHSN_RATIOS.length; i+=2) {
-					pathsn.push(
-					  PATHSN_RATIOS[i] * image.width * bitmap.scaleX,
-					  PATHSN_RATIOS[i+1] * image.height * bitmap.scaleY,					  
-					);    
-				}
-				for (var i=0 ; i<PATHJV_RATIOS.length; i+=2) {
-					pathjv.push(
-					  PATHJV_RATIOS[i] * image.width * bitmap.scaleX,
-					  PATHJV_RATIOS[i+1] * image.height * bitmap.scaleY,					  
-					);    
-				}
-				for (var i=0 ; i<PATHSG_RATIOS.length; i+=2) {
-					pathsg.push(
-					  PATHSG_RATIOS[i] * image.width * bitmap.scaleX,
-					  PATHSG_RATIOS[i+1] * image.height * bitmap.scaleY,					  
-					);    
-				}
-				for (var i=0 ; i<PATHML_RATIOS.length; i+=2) {
-					pathml.push(
-					  PATHML_RATIOS[i] * image.width * bitmap.scaleX,
-					  PATHML_RATIOS[i+1] * image.height * bitmap.scaleY,					  
-					);    
-				}
-				for (var i=0 ; i<PATHGOA_RATIOS.length; i+=2) {
-					pathgoa.push(
-					  PATHGOA_RATIOS[i] * image.width * bitmap.scaleX,
-					  PATHGOA_RATIOS[i+1] * image.height * bitmap.scaleY,					  
-					);    
-				}
-				for (var i=0 ; i<PATHCL_RATIOS.length; i+=2) {
-					pathcl.push(
-					  PATHCL_RATIOS[i] * image.width * bitmap.scaleX,
-					  PATHCL_RATIOS[i+1] * image.height * bitmap.scaleY,					  
-					);    
-				}
-				for (var i=0 ; i<PATHSAIGON_RATIOS.length; i+=2) {
-					pathsaigon.push(
-					  PATHSAIGON_RATIOS[i] * image.width * bitmap.scaleX,
-					  PATHSAIGON_RATIOS[i+1] * image.height * bitmap.scaleY,					  
-					);    
-				}
-				for (var i=0; i<PATHCR_RATIOS.length; i+=2) {
-					pathcr.push(
-					  PATHCR_RATIOS[i] * image.width * bitmap.scaleX,
-					  PATHCR_RATIOS[i+1] * image.height * bitmap.scaleY,					  
-					);    
-				}
-				for (var i=0; i<PATHUNKNOWN_RATIOS.length; i+=2) {
-					pathunknown.push(
-					  PATHUNKNOWN_RATIOS[i] * image.width * bitmap.scaleX,
-					  PATHUNKNOWN_RATIOS[i+1] * image.height * bitmap.scaleY,					  
-					);    
-				}
-				for (var i=0; i<PATHRETURNMACAU_RATIOS.length; i+=2) {
-					pathreturnmacau.push(
-					  PATHRETURNMACAU_RATIOS[i] * image.width * bitmap.scaleX,
-					  PATHRETURNMACAU_RATIOS[i+1] * image.height * bitmap.scaleY,					  
-					);    
-				}
-				for (var i=0; i<PATHBELAWAN_RATIOS.length; i+=2) {
-					pathbelawan.push(
-					  PATHBELAWAN_RATIOS[i] * image.width * bitmap.scaleX,
-					  PATHBELAWAN_RATIOS[i+1] * image.height * bitmap.scaleY,					  
-					);    
-				}
-				for (var i=0; i<PATHAG_RATIOS.length; i+=2) {
-					pathag.push(
-					  PATHAG_RATIOS[i] * image.width * bitmap.scaleX,
-					  PATHAG_RATIOS[i+1] * image.height * bitmap.scaleY,					  
-					);    
-				}
+				   pathag.length=0;*/
+					var tmppath=[];
+					//var tmppathall = PATHALL;
+					PATHALL.forEach(function(item){
+						//console.log("Array.isArray(item): "+Array.isArray(item));
+						//var tmppathpoints =new Array(item);
+						//console.log("tmppathpoints: "+tmppathpoints);
+						var tmpathnewpoints = [];
+						for(var i=0; i<item.length;i+=2){
+							//console.log("item[i]: "+item[i+1]);
+							tmpathnewpoints.push(
+								item[i]* image.width * bitmap.scaleX, 
+								item[i+1]* image.height * bitmap.scaleY,	
+							);
+							//console.log("tmppathnewpoints: "+tmpathnewpoints.toString());
+						}
+						
+						tmppath.push(tmpathnewpoints);
+						//console.log("tmppath: "+tmppath.length);
+					});
+				
 				//console.log("PATHE_RATIOS: "+PATHE_RATIOS.toString());
 				//console.log("image.width: "+image.width);
 				//console.log("bitmap.scaleX: "+bitmap.scaleX);
@@ -709,92 +677,96 @@
 					if(shiparray[i].specialcase==2){//處理不同的事件
 						journeyTimeW = monthTime*7.7;
 					}
+					
 					switch(shiparray[i].destination ? shiparray[i].destination : 0){
-						case "哈瓦那":
-							
+						case "哈瓦那":							
 						case "古巴":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: pathw1}},journeyTimeW).to({guide: {path: pathw2}},journeyTimeW).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[1]}},journeyTimeW).to({guide: {path: tmppath[2]}},journeyTimeW).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "卡亞俄":
 						case "秘魯":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: pathe, orient: "auto"}},journeyTimeE).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[0], orient: "auto"}},journeyTimeE).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
 							break;
 						case "舊金山":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: pathsf, orient: "auto"}},journeyTimeE).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[3], orient: "auto"}},journeyTimeE).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
 							break;
 						case "阿德雷德":
 						
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: pathad, orient: "auto"}},monthTime*1.5).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[4], orient: "auto"}},monthTime*1.5).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
 							break;
 						case "檳城":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: pathpg}},journeyTimeW).to( { alpha: 0 }, monthTime ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[5]}},journeyTimeW).to( { alpha: 0 }, monthTime ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "莫桑比克":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: pathw1}},journeyTimeW).to({guide: {path: pathmb}},monthTime/2).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path:  tmppath[1]}},journeyTimeW).to({guide: {path: tmppath[6]}},monthTime/2).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "蘇利南":
 						case "德梅拉拉":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: pathw1}},journeyTimeW).to({guide: {path: pathsn}},journeyTimeW*0.8).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[1]}},journeyTimeW).to({guide: {path: tmppath[7]}},journeyTimeW*0.8).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "爪哇":
 						case "巴達維亞":
 						case "巴達維亞和三寶瓏":
 
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: pathjv}},journeyTimeJV).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[8]}},journeyTimeJV).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "新加坡":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: pathsg}},journeyTimeSG).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[9]}},journeyTimeSG).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "馬尼拉":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: pathml}},monthTime*0.6).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[10]}},monthTime*0.6).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
 							break;
 						case "果亞":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: pathgoa}},journeyTimeGOA).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[11]}},journeyTimeGOA).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "詩蘭":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: pathcl}},journeyTimeGOA).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[12]}},journeyTimeGOA).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "西貢":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: pathsaigon}},monthTime*0.7).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[13]}},monthTime*0.7).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "哥斯達黎加":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: pathcr, orient: "auto"}},journeyTimeE).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[14], orient: "auto"}},journeyTimeE).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
 							break;
 						case "澳門":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: pathreturnmacau}},monthTime).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[16]}},monthTime).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
 							
 							shiparray[i].tween.setPosition(pos);
 							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
 							break;
 						case "不老灣":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: pathbelawan}},monthTime).wait(monthTime/2).call(showfist, [shiparray[i]], this).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[17]}},monthTime).wait(monthTime/2).call(showfist, [shiparray[i]], this).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "經安直港":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: pathjv}},journeyTimeJV).call(showfist, [shiparray[i]], this).wait(monthTime/3).to({guide: {path: pathag}},monthTime).to({guide: {path: pathw2}},journeyTimeW).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[8]}},journeyTimeJV).call(showfist, [shiparray[i]], this).wait(monthTime/3).to({guide: {path: tmppath[18]}},monthTime).to({guide: {path: tmppath[1]}},journeyTimeW).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
+						case "南中國海沉沒":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[19]}},monthTime).call(sink, [shiparray[i]], this).wait(monthTime/4).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						default:
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: pathunknown, orient: "auto"}},monthTime).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path:tmppath[15], orient: "auto"}},monthTime).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
 							
 							shiparray[i].tween.setPosition(pos);
 							break;
@@ -824,9 +796,16 @@
 					array.casebitmap.regX = array.shipbitmap.image.width/2;
 					array.casebitmap.regY = 300;
 					array.shipsvg.addChild(array.casebitmap);
-					createjs.Tween.get(array.casebitmap).to({alpha:0})
+					createjs.Tween.get(array.casebitmap).to({alpha:0}, 3000);
 				//}
 			//}
+		 }
+		 function sink(array, obj){
+			array.casebitmap = new createjs.Bitmap(sinkship);
+			array.casebitmap.regX = array.shipbitmap.regX;
+			array.casebitmap.regY = array.shipbitmap.regY;
+			array.shipbitmap.alpha = 0;
+			array.shipsvg.addChild(array.casebitmap);
 		 }
 		function getFixScale(obj, s){
 			var tmpImg = obj.getChildAt(0).image;
@@ -893,41 +872,7 @@
 		}
 
 
-		stage.addEventListener("stagemousedown", function(e) {
-
-			//console.log("e.stageX: "+e.stageX);
-			//console.log("e.stageY: "+e.stageY);
-			//console.log("stage.x: "+stage.x);
-			//console.log("stage.y: "+stage.y);
-			//console.log("stage.regY : "+stage.regY );
-			//console.log("stage.mouseY; : "+stage.mouseY );
-			
-			var offset={x:stage.x-e.stageX,y:stage.y-e.stageY};
-			//console.log("offset.x : "+offset.x );
-			//console.log("offset.y : "+offset.y );
-			//var tmppoint =  shiparray[shiparray.length - 1].globalToLocal(e.stageX, e.stageY);
-			//console.log("tmppoint.x : "+tmppoint.x );
-			//console.log("tmppoint.y : "+tmppoint.y );
-			
-			
-			stage.addEventListener("stagemousemove",function(ev) {
-				stage.x = ev.stageX+offset.x;
-				/*if(image.height*stage.scaleY*bitmap.scaleY*0.9>canvas.height){
-					stage.y = ev.stageY+offset.y;
-					
-				}else{
-					stage.y=0;
-				}*/
-				var tmpY = ev.stageY+offset.y;
-				//if(tmpY< 0 && tmpY> canvas.height-image.height*stage.scaleY*bitmap.scaleY){
-					stage.y = tmpY;
-				//}
-				stage.update();
-			});
-			stage.addEventListener("stagemouseup", function(){
-				stage.removeAllEventListeners("stagemousemove");
-			});
-		}); 
+		
 		
 		function getMaxMinNumber (callback) {
 			var tmpOpenReq = indexedDB.open(DB_NAME);
@@ -963,6 +908,10 @@
 			}
 		}
 		function setValue(){
+			if(settingValue){
+				return;
+			}
+			settingValue=true;
 			range.removeEventListener('mouseup', setValue);
 			range.removeEventListener('touchend', setValue);
 			var tmpOpenReq = indexedDB.open(DB_NAME);
@@ -1092,7 +1041,7 @@
 										 new createjs.ColorFilter(0,0.5,0,1, -255,255,-255,1),
 										 new createjs.BlurFilter(10, 10, 1)
 									 ];
-									cursor.value.shipbitmap.cache(-100, -100, 1000, 1000);
+									cursor.value.shipbitmap.cache(0, 0, cursor.value.shipbitmap.image.width,340);
 									break;
 								case "4":
 									bubble.alpha = 1;
@@ -1101,6 +1050,10 @@
 								case "5":
 									bubble.alpha = 1;
 									cursor.value.destination = "經安直港";
+									break;
+								case "6":
+									bubble.alpha = 1;
+									cursor.value.destination = "南中國海沉沒";
 									break;
 							}
 							getFixScale(cursor.value.shipsvg, SHIP_TO_CANVAS_RATIO);
@@ -1120,7 +1073,7 @@
 							
 								range.addEventListener('mouseup', setValue);
 								range.addEventListener('touchend', setValue);
-								
+								settingValue=false;
 							
 						}
 					}
@@ -1175,6 +1128,7 @@
 		range.addEventListener('mouseup', setValue);
 		range.addEventListener('touchend', setValue);
 		range.addEventListener('input', changeValue);
+		
 	}
       
 	
@@ -1182,10 +1136,7 @@
 </script>
 	<canvas id="myCanvas" style="background-color:white;" >不支援</canvas>
 	<div>
-	<img style="display: none;" border="0" src="http://www.kingchigames.com/Games/earthgodjpg.jpg"  />
-		<h1>澳門土地公位置圖(高德地圖版本)</h1>
-		<p>高德地圖版本的土地公位置圖受流量限制和內地加密定位的影響，每天的使用次數會有所限制，定位誤差稍大。	
-		</p>
+	
 	</div>
 	<div>
 
