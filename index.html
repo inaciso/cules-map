@@ -3,7 +3,7 @@
 
 <head>
 	<meta charset="utf-8">
-	<meta name='viewport' content='width=device-width, height=device-height,  user-scalable=no' />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 	<style>
 		body {
 
@@ -17,38 +17,11 @@
 			border:0 none;
 			overflow:hidden;
 		}
-		
-		/*
-			input{
-				position:fixed;
-				height:auto;
-				width:50vw;
-				bottom:10vh;
-				left:25vw;
-				color:;
-				z-index: 999;			
-			}
-			input[type=range]::-webkit-slider-runnable-track {
-			  width: 100%;
-			  height: 5vh;
-			  cursor: pointer;
-			  animate: 0.2s;
-			  
-			  background: #99d4ff;
-			  border-radius: 5vh;
-				
-			}
-			input[type=range]::-webkit-slider-thumb {
-			  -webkit-appearance: none;
-			 
-			  height: 5vw;
-			  width: 5vw;
-			  border-radius: 5vh;
-			  background: #ffffff;
-			  cursor: pointer;
+		canvas{
+			width: 100vw;
+			height: 100vh;
+		}
 
-			}
-		*/
 		#yearTextField{		
 			font-family:   Brush Script MT , Garamond , Georgia , Times New Roman;
 			position: absolute;
@@ -285,6 +258,7 @@
 		var settingValue = false;
 		var evCache = new Array();//用於手勢放大
 		var prevDiff = -1;
+		var touchMoveTimes = 0;
 		//barcaone.src = "barca1.png"
 		function handleImageLoad(){
 			bitmap = new createjs.Bitmap(image);
@@ -548,15 +522,23 @@
 		//shipsvg.y = MACAU.y;
 		//stage.update();	
 		//handleResize();
-		//createjs.Touch.enable(stage);
+		createjs.Touch.enable(stage);
 		canvas.addEventListener("mousewheel", MouseWheelHandler, false);
 		canvas.addEventListener("DOMMouseScroll", MouseWheelHandler, false);
 
 		function MouseWheelHandler(e) {
-			const { ctrlKey } = e
-			if (ctrlKey) {
-				e.preventDefault();
+		
+			if (e.cancelable) {
+					try{
+						e.preventDefault();
+					}catch (error){
+						 console.log("error in ev.preventDefault: "+error);
+					}
 			}
+			const { ctrlKey } = e
+			/*if (ctrlKey) {
+				e.preventDefault();
+			}*/
 			if(Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)))>0){
 				var zoom = 1.1;
 				
@@ -606,22 +588,36 @@
 			obj.scaleY = obj.scaleX;
 			console.log("obj.scaleX: "+ obj.scaleX );
 		}
+		
 		canvas.addEventListener("pointerdown", function(e){
 			evCache.push(e);
 			var p = stage.globalToLocal(stage.mouseX, stage.mouseY);
 			
 			var offset={x:stage.x-p.x,y:stage.y-p.y};	
+			var beforeScreen = {x: e.screenX, y:e.screenY};
 			console.log("pointerDown", e);
 			console.log("stage.x: " + stage.x+", "+"stage.y: " + stage.y);
 			console.log("p.x: " + p.x+", "+"p.y: " + p.y);
+			console.log("offset.x: "+offset.x +", offset.y:"+ offset.y);
+			console.log("stage.mouseX: "+stage.mouseX+", stage.mouseY:"+stage.mouseY);
 			canvas.addEventListener("pointerup",pointerup_handler);
 			canvas.addEventListener("pointercancel",pointerup_handler);
 			canvas.addEventListener("pointerleave",pointerup_handler);
 			canvas.addEventListener("pointerout",pointerup_handler);
 			canvas.addEventListener("pointermove", pointermove_handler);
+			canvas.addEventListener("pressmove", pointermove_handler);
 			//setInterval(pointermove_handler, 500);
 			function pointermove_handler(ev){
-				 console.log("pointerMove", ev);
+				if (ev.cancelable) {
+					try{
+						ev.preventDefault();
+					}catch (error){
+						 console.log("error in ev.preventDefault: "+error);
+					}
+				}
+				touchMoveTimes++;
+				 //console.log("pointerMove", ev);
+				 
 				 // Find this event in the cache and update its record with this event
 				 for (var i = 0; i < evCache.length; i++) {
 				   if (ev.pointerId == evCache[i].pointerId) {
@@ -633,9 +629,10 @@
 				 // If two pointers are down, check for pinch gestures
 				 if (evCache.length >= 2) {
 				   // Calculate the distance between the two pointers
-				   var curDiff = Math.sqrt(Math.pow(evCache[0].clientX - evCache[1].clientX, 2)+Math.pow(evCache[0].clientY - evCache[1].clientY, 2));
+				   var curDiff = Math.sqrt(Math.pow(evCache[0].screenX - evCache[1].screenX, 2)+Math.pow(evCache[0].screenY - evCache[1].screenY, 2));
 					var zoom =curDiff/prevDiff;
-					console.log("zoom: " + zoom);
+					//console.log("touchMoveTimes: "+ touchMoveTimes+ "; zoom: " + zoom +"; curDiff: "+curDiff+"; prevDiff: "+prevDiff);
+					
 				   if (prevDiff > 0) {
 					doZoom(zoom);
 					 /*if (curDiff > prevDiff) {
@@ -655,50 +652,27 @@
 				   // Cache the distance for the next move event
 				   prevDiff = curDiff;
 				 }else{
-					//ev.preventDefault();
-					var tmpP = stage.globalToLocal(stage.mouseX, stage.mouseY);
-					stage.x = tmpP.x+offset.x;
-					var tmpY = tmpP.y+offset.y;
-					stage.y = tmpY;
-					stage.update();	
+					if(true){
+						stage._updatePointerPosition(stage.id, e, stage.pageX, stage.pageY);
+						var tmpP = stage.globalToLocal(stage.mouseX, stage.mouseY);
+						stage.x = tmpP.x+offset.x;
+						var tmpY = tmpP.y+offset.y;
+						stage.y = tmpY;
+						
+
+						console.log("pointerMove", ev);
+						console.log("stage.x: " + stage.x+", "+"stage.y: " + stage.y);
+						console.log("tmpP.x: " + tmpP.x+", "+"tmpP.y: " + tmpP.y);
+						console.log("stage.mouseX: "+stage.mouseX+", stage.mouseY:"+stage.mouseY);
+						stage.update();	
+					}
 				 }
 			 }
 			function pointerup_handler(ev) {
 			  //console.log(ev.type, ev);
 			  canvas.removeEventListener("pointermove", pointermove_handler);
-			  for (var i = 0; i < evCache.length; i++) {
-				   if (ev.pointerId == evCache[i].pointerId) {
-					  evCache[i] = ev;
-				   break;
-				   }
-				 }
-
-				 // If two pointers are down, check for pinch gestures
-				 if (evCache.length >= 2) {
-				   // Calculate the distance between the two pointers
-				   var curDiff = Math.sqrt(Math.pow(evCache[0].clientX - evCache[1].clientX, 2)+Math.pow(evCache[0].clientY - evCache[1].clientY, 2));
-					var zoom =curDiff/prevDiff
-					console.log("zoom: " + zoom);
-				   if (prevDiff > 0) {
-					doZoom(zoom);
-					 /*if (curDiff > prevDiff) {
-					   // The distance between the two pointers has increased
-					   console.log("Pinch moving OUT -> Zoom in", ev);
-					   ev.preventDefault();
-						
-					 }
-					 if (curDiff < prevDiff) {
-						ev.preventDefault();
-					   // The distance between the two pointers has decreased
-					   console.log("Pinch moving IN -> Zoom out",ev);
-
-					 }*/
-				   }
-
-				   // Cache the distance for the next move event
-				   prevDiff = curDiff;
-				 }
-			  //clearInterval(pointermove_handler);
+			  canvas.removeEventListener("pressmove", pointermove_handler);
+			   //clearInterval(pointermove_handler);
 			  // Remove this pointer from the cache and reset the target's
 				
 				for (var i = 0; i < evCache.length; i++) {
@@ -737,6 +711,7 @@
 		  stage.update(event);		  
 		}
 		function handleResize(event) {
+				console.log("resized");
 				  var w = window.innerWidth,
 					  h = window.innerHeight;
 				  var pos = 0;
