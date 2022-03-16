@@ -604,11 +604,11 @@
 			canvas.addEventListener("pointercancel",pointerup_handler);
 			canvas.addEventListener("pointerleave",pointerup_handler);
 			canvas.addEventListener("pointerout",pointerup_handler);
-			if (e.pointerType=="touch"){
+			//if (e.pointerType=="touch"){
 				canvas.addEventListener("pressmove", pointermove_handler);
-			}else{
+			//}else{
 				canvas.addEventListener("pointermove", pointermove_handler);
-			}
+			//}
 			//setInterval(pointermove_handler, 500);
 			function pointermove_handler(ev){
 				if (ev.cancelable) {
