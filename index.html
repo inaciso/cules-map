@@ -594,18 +594,21 @@
 			var p = stage.globalToLocal(stage.mouseX, stage.mouseY);
 			
 			var offset={x:stage.x-p.x,y:stage.y-p.y};	
-			var beforeScreen = {x: e.screenX, y:e.screenY};
-			console.log("pointerDown", e);
-			console.log("stage.x: " + stage.x+", "+"stage.y: " + stage.y);
-			console.log("p.x: " + p.x+", "+"p.y: " + p.y);
-			console.log("offset.x: "+offset.x +", offset.y:"+ offset.y);
-			console.log("stage.mouseX: "+stage.mouseX+", stage.mouseY:"+stage.mouseY);
+			//var beforeScreen = {x: e.screenX, y:e.screenY};
+			//console.log("pointerDown", e);
+			//console.log("stage.x: " + stage.x+", "+"stage.y: " + stage.y);
+			//console.log("p.x: " + p.x+", "+"p.y: " + p.y);
+			//console.log("offset.x: "+offset.x +", offset.y:"+ offset.y);
+			//console.log("stage.mouseX: "+stage.mouseX+", stage.mouseY:"+stage.mouseY);
 			canvas.addEventListener("pointerup",pointerup_handler);
 			canvas.addEventListener("pointercancel",pointerup_handler);
 			canvas.addEventListener("pointerleave",pointerup_handler);
 			canvas.addEventListener("pointerout",pointerup_handler);
-			canvas.addEventListener("pointermove", pointermove_handler);
-			canvas.addEventListener("pressmove", pointermove_handler);
+			if (e.pointerType=="touch"){
+				canvas.addEventListener("pressmove", pointermove_handler);
+			}else{
+				canvas.addEventListener("pointermove", pointermove_handler);
+			}
 			//setInterval(pointermove_handler, 500);
 			function pointermove_handler(ev){
 				if (ev.cancelable) {
@@ -652,20 +655,20 @@
 				   // Cache the distance for the next move event
 				   prevDiff = curDiff;
 				 }else{
-					if(true){
-						stage._updatePointerPosition(stage.id, e, stage.pageX, stage.pageY);
+					
+						//stage._updatePointerPosition(stage.id, e, stage.pageX, stage.pageY);
 						var tmpP = stage.globalToLocal(stage.mouseX, stage.mouseY);
 						stage.x = tmpP.x+offset.x;
 						var tmpY = tmpP.y+offset.y;
 						stage.y = tmpY;
-						
 
-						console.log("pointerMove", ev);
-						console.log("stage.x: " + stage.x+", "+"stage.y: " + stage.y);
-						console.log("tmpP.x: " + tmpP.x+", "+"tmpP.y: " + tmpP.y);
-						console.log("stage.mouseX: "+stage.mouseX+", stage.mouseY:"+stage.mouseY);
+
+						//console.log("pointerMove", ev);
+						//console.log("stage.x: " + stage.x+", "+"stage.y: " + stage.y);
+						//console.log("tmpP.x: " + tmpP.x+", "+"tmpP.y: " + tmpP.y);
+						//console.log("stage.mouseX: "+stage.mouseX+", stage.mouseY:"+stage.mouseY);
 						stage.update();	
-					}
+					
 				 }
 			 }
 			function pointerup_handler(ev) {
