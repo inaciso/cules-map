@@ -17,11 +17,36 @@
 			border:0 none;
 			overflow:hidden;
 		}
-		canvas{
+		#mapCanvas{
 			width: 100vw;
 			height: 100vh;
 		}
-
+		#chartDiv{
+			position:fixed;
+			width:50vw !important;
+			height: 10vh !important;
+			bottom:0vh;
+			left:25vw;
+			border-radius: 0; /* iOS */
+			z-index: 997;
+		}
+		#chartCanvas{
+			position:fixed;
+			width:50vw !important;
+			height: 10vh !important;
+			bottom:0vh;
+			left:25vw;
+			border-radius: 0; /* iOS */
+			z-index: 998;
+			
+		}
+		.plaque{
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			margin-left: -290px; /* Half the width */
+			margin-top: -250px;
+		}
 		#yearTextField{		
 			font-family:   Brush Script MT , Garamond , Georgia , Times New Roman;
 			position: absolute;
@@ -101,20 +126,29 @@
 			border-radius: 5px;  
 		}
 
-		.triangle-isosceles:after{
+		.triangle-isosceles-span{
 			content: "";
 			position: absolute;
-			bottom: -2vw;
+			bottom: -2vw;/* 如果改為top,變成向上 */
 			left:26vw;
 			display:block;
 			width:0;
-			height: 0;
-		  
-			border-top: 2vw solid #DDDCB2;
-		  
+			height: 0;		  
+			border-top: 2vw solid #DDDCB2;/* 如果改為bottom,變成向上 */		  
 			border-left: 2vw solid transparent;
-			border-right: 2vw solid transparent;
-		  
+			border-right: 2vw solid transparent;		  
+		}
+		.triangle-isosceles-span-up{
+			content: "";
+			position: absolute;
+			top: -2vw;/* 如果改為top,變成向上 */
+			left:26vw;
+			display:block;
+			width:0;
+			height: 0;		  
+			border-bottom: 2vw solid #DDDCB2;/* 如果改為bottom,變成向上 */		  
+			border-left: 2vw solid transparent;
+			border-right: 2vw solid transparent;		  
 		}
 		
 	</style>
@@ -126,10 +160,12 @@
 	<title>
 		澳門賣豬仔船運圖
 	</title>
-	<script src="https://code.createjs.com/1.0.0/createjs.min.js"></script>
-	<script src="https://code.createjs.com/1.0.0/tweenjs.min.js"></script>
+	<script src="createjs.min.js"></script>
+	<script src="tweenjs.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 	<script>
-				createjs.MotionGuidePlugin.install();
+		createjs.MotionGuidePlugin.install();
 	</script>
 </head>
 
@@ -177,55 +213,63 @@
 		const range = document.getElementById("range");
 		const yearTextField = document.getElementById("yearTextField");
 		const monthTime = 1000;
+		const ARRIVALTIME = 3000;
 		//var zoom;
-		var pathe = [];
-		var pathw1 = [];
-		var pathw2 = [];
-		var pathsf=[];
-		var pathad = [];
-		var pathpg = [];
-		var pathmb = [];
-		var pathsn = [];
-		var pathjv = [];
-		var pathsg=[];
-		var pathml=[];
-		var pathgoa=[];
-		var pathcl=[];
-		var pathsaigon = [];
-		var pathcr = [];
-		var pathreturnmacau = [];
-		var pathunknown = [];
-		var pathbelawan = [];
-		var pathag = [];
-		var pathsinkscs = [];
-		
-		var PATHE_RATIOS =[];
-		var PATHW1_RATIOS=[];
-		var PATHW2_RATIOS=[];
-		var PATHSF_RATIOS=[];
-		var PATHAD_RATIOS=[];
-		var PATHPG_RATIOS=[];
-		var PATHMB_RATIOS=[];
-		var PATHSN_RATIOS=[];
-		var PATHJV_RATIOS=[];
-		var PATHSG_RATIOS=[];
-		var PATHML_RATIOS=[];
-		var PATHGOA_RATIOS=[];
-		var PATHCL_RATIOS=[];
-		var PATHSAIGON_RATIOS=[];
-		var PATHCR_RATIOS=[];
-		var PATHUNKNOWN_RATIOS=[];
-		var PATHRETURNMACAU_RATIOS=[];
-		var PATHBELAWAN_RATIOS=[];
-		var PATHAG_RATIOS=[];
-		var PATHSINKSCS=[];
+		var oddEven = true;//這個變數用來控制triangle-isosceles是否向上
 		var PATHALL=[];
 		
+		//以下用於圖表中
+		var chartAspectRatio = 0.5*window.innerWidth/(0.1*window.innerHeight);
+		var labels=[];
+		var data = {};
+		Chart.register(ChartDataLabels);
+		Chart.defaults.font.size = 40;
+		var config = {
+			type: 'bar',
+			options: {
+				maintainAspectRatio: true,
+				aspectRatio: chartAspectRatio,
+				scales: {
+					xAxes: {
+						ticks: {
+							display: false,
+						}
+					},
+					yAxes: {
+						display: false
+					},
+				},
+
+
+				plugins:{
+					legend:{
+						display:false,
+					},
+					tooltip:{
+						enabled: false,
+
+					},
+					datalabels: {
+						 clamp: true,
+						 display: false,//最初要隱藏
+						 align: 'center',
+						 anchor: 'center',
+						 rotation: 90,
+						 formatter: function(value, context) {
+						  return context.chart.data.labels[context.dataIndex];
+						}
+					  },
+				}
+			}
+		};
+
+		var chartCanvas;
+		//以上用於圖表中
 		var bitmap;
-		var canvas= document.getElementById("myCanvas");
+		var canvas= document.getElementById("mapCanvas");
 		canvas.width = window.innerWidth;
 		canvas.height = window.innerHeight;   
-		var stage = new createjs.Stage("myCanvas");
+		var stage = new createjs.Stage("mapCanvas");
 		var image = new Image();
 		image.src = "oldmap.jpg";
 		image.onload = handleImageLoad;
@@ -238,7 +282,7 @@
 		var escuna = new Image();
 		var casetwo = new Image();
 		var fire = new Image();
-		var plaque = new Image();
+		
 		var fist = new Image();
 		var sinkship = new Image();
 		//var barcaone = new Image();
@@ -250,7 +294,7 @@
 		lorcha.src = "lorcha.png";
 		escuna.src = "escuna.png";
 		fire.src="fire.png";
-		plaque.src ="plaque.png";
+		
 		fist.src = "fist.png";
 		casetwo.src = "case2.png";
 		sinkship.src = "sinkship.png";
@@ -430,12 +474,57 @@
 				1089/image.width, 2951/image.height,
 				1131/image.width, 2567/image.height,
 			]);
+			PATHALL.push([//PATHALL[20]：印度支那沉沒
+				MACAU.x/image.width, MACAU.y/image.height,
+				1105/image.width, 2805/image.height,
+				955/image.width, 2664/image.height,
+			]);
+			PATHALL.push([ //PATHALL[21]：去大溪地
+				MACAU.x/image.width, MACAU.y/image.height,			  
+				TAIWAN_STRAIT.x/image.width, TAIWAN_STRAIT.y/image.height,
+				JAPANSEA.x/image.width, JAPANSEA.y/image.height,			  
+				2016/image.width, 2807/image.height,
+				3080/image.width, 3191/image.height,
+			]);
+			PATHALL.push([ //PATHALL[22]：去新西蘭
+				MACAU.x/image.width, MACAU.y/image.height,			  
+				1272/image.width, 2385/image.height,
+				1396/image.width, 2593/image.height,			  
+				1553/image.width, 2826/image.height,
+				1695/image.width, 2865/image.height,
+			]);
 			
+			PATHALL.push([ //PATHALL[23]：新西蘭回澳
+				1695/image.width, 2865/image.height,
+				1553/image.width, 2826/image.height,
+				1448/image.width, 2582/image.height,
+				1264/image.width, 2407/image.height,
+				MACAU.x/image.width, MACAU.y/image.height,
+			]);
+			PATHALL.push([ //PATHALL[24]：海上焚燬
+				MACAU.x/image.width, MACAU.y/image.height,			  
+				TAIWAN_STRAIT.x/image.width, TAIWAN_STRAIT.y/image.height,
+				JAPANSEA.x/image.width, JAPANSEA.y/image.height,	 
+			]);
+			PATHALL.push([ //PATHALL[25]：海上焚燬				
+				JAPANSEA.x/image.width, JAPANSEA.y/image.height,			  
+				2091/image.width, 2310/image.height,
+				2290/image.width, 2387/image.height,
+			]);
+			PATHALL.push([ //PATHALL[26]：函館		
+				MACAU.x/image.width, MACAU.y/image.height,			  
+				1247/image.width, 2284/image.height,
+				1484/image.width, 2189/image.height,
+				1690/image.width, 2085/image.height,
+				1723/image.width, 1924/image.height,
+				1769/image.width, 1896/image.height,
+				1681/image.width, 1900/image.height,
+			]);
 			//console.log("PATHE_RATIOS: "+PATHE_RATIOS.toString());
 		}
 
 		if (!window.indexedDB) {
-			window.alert("抱歉，你的瀏覽器無法支援土地公收藏架。敬請使用其他瀏覽器。");
+			window.alert("抱歉，你的瀏覽器無法支援。敬請使用其他瀏覽器。");
 			
 		}else{
 			//window.alert("瀏覽器通過測試。");
@@ -477,7 +566,7 @@
 				var transaction = db.transaction(DB_STORE_NAME, 'readwrite');
 				var objectStore = transaction.objectStore(DB_STORE_NAME);
 				for (i = 0; i < jsonship.jsonship.length; i++) { 
-					console.log(jsonship.jsonship[i]);
+					//console.log(jsonship.jsonship[i]);
 					objectStore.put(jsonship.jsonship[i]);
 				}
 				getMaxMinNumber();
@@ -584,12 +673,16 @@
 		}
 		function getFixScale(obj, s){
 			var tmpImg = obj.getChildAt(0).image;
+			
 			obj.scaleX = s * canvas.width / ( obj.parent.scaleX * tmpImg.width );
+			//obj.scaleX = s * canvas.width / ( obj.parent.scaleX * 500 );
 			obj.scaleY = obj.scaleX;
-			console.log("obj.scaleX: "+ obj.scaleX );
+			//console.log(obj.parent+".scaleX: "+obj.parent.scaleX +obj.parent.scaleX+", obj.scaleX: "+ obj.scaleX+", Img: "+ tmpImg.src);
 		}
 		
 		canvas.addEventListener("pointerdown", function(e){
+			
+			
 			evCache.push(e);
 			var p = stage.globalToLocal(e.screenX, e.screenY);
 			var smootharray = [];
@@ -665,7 +758,7 @@
 						var tmpP = stage.globalToLocal(ev.screenX, ev.screenY);
 						smootharray.push(tmpP);
 						smootharray.shift();
-						var xPosCount = 0;
+						var xPosCount = 0;//以下是盡可能減少globalToLocal()出錯而加的,因為globalToLocal()在canvas未更新前會出錯，跳回舊的位置
 						var yPosCount = 0;
 						for(var i = 1; i<smootharray.length ;i++){
 							if(smootharray[i].x > smootharray[i-1].x ){
@@ -787,8 +880,8 @@
 						for(var i=0; i<item.length;i+=2){
 							//console.log("item[i]: "+item[i+1]);
 							tmpathnewpoints.push(
-								item[i]* image.width * bitmap.scaleX, 
-								item[i+1]* image.height * bitmap.scaleY,	
+								item[i]* image.width * bitmap.scaleX + 3*i*Math.random(), 
+								item[i+1]* image.height * bitmap.scaleY+ 3*i*Math.random(),	
 							);
 							//console.log("tmppathnewpoints: "+tmpathnewpoints.toString());
 						}
@@ -828,94 +921,125 @@
 					switch(shiparray[i].destination ? shiparray[i].destination : 0){
 						case "哈瓦那":							
 						case "古巴":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[1]}},journeyTimeW).to({guide: {path: tmppath[2]}},journeyTimeW).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[1]}},journeyTimeW).to({guide: {path: tmppath[2]}},journeyTimeW).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "卡亞俄":
 						case "秘魯":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[0], orient: "auto"}},journeyTimeE).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+						case "利馬":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path:tmppath[0], orient: "auto"}},journeyTimeE).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
 							break;
 						case "舊金山":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[3], orient: "auto"}},journeyTimeE).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[3], orient: "auto"}},journeyTimeE).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
 							break;
 						case "阿德雷德":
 						
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[4], orient: "auto"}},monthTime*1.5).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[4], orient: "auto"}},monthTime*1.5).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
 							break;
 						case "檳城":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[5]}},journeyTimeW).to( { alpha: 0 }, monthTime ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[5]}},journeyTimeW).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "莫桑比克":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path:  tmppath[1]}},journeyTimeW).to({guide: {path: tmppath[6]}},monthTime/2).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path:  tmppath[1]}},journeyTimeW).to({guide: {path: tmppath[6]}},monthTime/2).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "蘇利南":
 						case "德梅拉拉":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[1]}},journeyTimeW).to({guide: {path: tmppath[7]}},journeyTimeW*0.8).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[1]}},journeyTimeW).to({guide: {path: tmppath[7]}},journeyTimeW*0.8).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "爪哇":
 						case "巴達維亞":
 						case "巴達維亞和三寶瓏":
 
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[8]}},journeyTimeJV).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[8]}},journeyTimeJV).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "新加坡":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[9]}},journeyTimeSG).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[9]}},journeyTimeSG).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "馬尼拉":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[10]}},monthTime*0.6).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[10]}},monthTime*0.6).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
 							break;
 						case "果亞":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[11]}},journeyTimeGOA).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[11]}},journeyTimeGOA).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "詩蘭":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[12]}},journeyTimeGOA).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[12]}},journeyTimeGOA).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "西貢":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[13]}},monthTime*0.7).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[13]}},monthTime*0.7).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "哥斯達黎加":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[14], orient: "auto"}},journeyTimeE).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[14], orient: "auto"}},journeyTimeE).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
 							break;
 						case "澳門":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[16]}},monthTime).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[16]}},monthTime).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
 							
 							shiparray[i].tween.setPosition(pos);
 							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
 							break;
 						case "不老灣":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[17]}},monthTime).wait(monthTime/2).call(showfist, [shiparray[i]], this).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[17]}},monthTime).wait(monthTime/2).call(showfist, [shiparray[i]], this).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "經安直港":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[8]}},journeyTimeJV).call(showfist, [shiparray[i]], this).wait(monthTime/3).to({guide: {path: tmppath[18]}},monthTime).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[8]}},journeyTimeJV).call(showfist, [shiparray[i]], this).wait(monthTime/3).to({guide: {path: tmppath[18]}},monthTime).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "南中國海沉沒":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[19]}},monthTime).call(sink, [shiparray[i]], this).wait(monthTime/4).to( { alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[19]}},monthTime).call(sink, [shiparray[i]], this).wait(monthTime/4).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
-						default:
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path:tmppath[15], orient: "auto"}},monthTime).to({ alpha: 0 }, 1000 ).call(arrival, [shiparray[i].counter], this);
-							
+						case "印度支那沉沒":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[20]}},monthTime).call(sink, [shiparray[i]], this).wait(monthTime/4).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
+							break;
+						case "船行5日暴動後往古巴":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha: 0} ).wait(month).call(showfist, [shiparray[i]], this).to({ alpha:1} ).to({guide: {path: tmppath[1]}},journeyTimeW).to({guide: {path: tmppath[2]}},journeyTimeW).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
+						case "大溪地":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[21]}},journeyTimeE*0.6).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
+							break;
+						case "新西蘭回澳":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[22]}},monthTime*2.5).call(showfist, [shiparray[i]], this).wait(monthTime/3).call(changeShipOrientation, [shiparray[i]], this).to({guide: {path: tmppath[23]}},monthTime*2.5).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
+							break;
+						case "海上焚燬":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[24]}},journeyTimeE*0.4).call(catchfire, [shiparray[i]], this).to({guide: {path: tmppath[25]}},journeyTimeE*0.6).call(sink, [shiparray[i]], this).wait(monthTime/4).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
+							break;
+						case "函館":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path:tmppath[26]}},monthTime*3).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
+							break;
+						default://其他航線**************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************
+							//記得不可亂插入
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path:tmppath[15], orient: "auto"}},monthTime).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							//記得不可亂插入
+							shiparray[i].tween.setPosition(pos);
+							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
 							break;
 					}
 					 
@@ -924,17 +1048,75 @@
 
 			 
 		 }
-		 function arrival(counterNum, obj){
+
+		 function arrival(counterNum, obj){//移除船隻
 			//console.log("arrival: "+counterNum);
 			for(let i=0; i<shiparray.length;i++){
 				if(counterNum == shiparray[i].counter){
 				
 					stage.removeChild(shiparray[i].shipsvg);
+					shiparray[i].bubble.remove();	
+					
 					shiparray.splice(i, 1);
 					//console.log("shiparray.length: "+shiparray.length);
 					break;
 				}
 			}
+		 }
+		 function showArrival(array, obj){//顯示船隻的結果
+			//console.log("array.bubble.innerHTML: "+ array.bubble.innerHTML);
+			var htmlp = array.bubble.getElementsByClassName("triangle-isosceles");	
+			//console.log("htmlp: "+htmlp[0]);
+			if(array.event){
+				htmlp[0].innerHTML ="豬仔船"+array.shipname+"號"+array.event;
+			}else{
+				htmlp[0].innerHTML = "豬仔船"+array.shipname+"號";
+				if(array.destination){
+					htmlp[0].innerHTML+="到達"+array.destination+"。";
+				}else{
+					htmlp[0].innerHTML+="航向未明。";
+				}
+			}
+
+			if(oddEven){//以下控制出現上箭頭還是下箭頭				
+				console.log(" htmlspan[0].style.bottom: "+ array.bubble.innerHTML);
+				oddEven = false;
+				var htmlspan = document.createElement('span');
+				htmlspan.className = "triangle-isosceles-span";
+				htmlp[0].appendChild(htmlspan);
+				array.DOMBubble.regY = array.bubble.clientHeight+50;
+			}else{
+				oddEven = true;
+				var htmlspan = document.createElement('span');
+				htmlspan.className = "triangle-isosceles-span-up";
+				htmlp[0].appendChild(htmlspan);
+				array.DOMBubble.regY = 0;
+				 //var htmlafter = window.getComputedStyle(htmlp[0], ":after").getPropertyValue("content");
+				//var htmlafter =  array.bubble.getElementsByClassName("triangle-isosceles:after");
+				//console.log("htmlafter: "+htmlafter);
+				//htmlspan[0].style.top = htmlspan[0].style.bottom;
+				//htmlspan[0].style.borderTop = htmlspan[0].style.borderBottom;
+				//htmlspan[0].style.borderBottom = 0;
+				//htmlspan[0].style.bottom = 0;
+				 
+			}
+			//var bubble = new createjs.DOMElement(cursor.value.bubble);
+			chartCanvas.options.plugins.datalabels.display = true;
+			chartCanvas.update();
+			for(var tmpNum = 0; tmpNum < labels.length; tmpNum++){
+				if(labels[tmpNum] == array.year && array.cules){
+					//console.log("labels["+tmpNum+"]: "+array.year);
+					
+					
+					chartCanvas.data.datasets[0].data[tmpNum] -= Math.floor(array.cules);
+					console.log("chartCanvas.data.datasets[0].data["+tmpNum+"]: "+chartCanvas.data.datasets[0].data[tmpNum]);
+					break;
+				}
+			}
+			
+			chartCanvas.update('active');
+			
+			array.shipsvg.bubbleShowAWhile();
 		 }
 		 function showfist(array, obj){
 			//for(let i=0; i<shiparray.length;i++){
@@ -954,8 +1136,15 @@
 			array.shipbitmap.alpha = 0;
 			array.shipsvg.addChild(array.casebitmap);
 		 }
-		
-
+		 function changeShipOrientation(array, obj){
+			array.shipsvg.getChildAt(0).scaleX *= -1;
+		 }
+		 function catchfire(array, obj){
+			array.casebitmap = new createjs.Bitmap(fire);
+			array.casebitmap.regX = array.shipbitmap.image.width/2;
+			array.casebitmap.regY = 300;
+			array.shipsvg.addChild(array.casebitmap);
+		 }
 		
 		
 		function getMaxMinNumber (callback) {
@@ -965,25 +1154,46 @@
 				var tmpTransaction = tmpDb.transaction(DB_STORE_NAME, 'readonly');
 				var tmpObjectStore = tmpTransaction.objectStore(DB_STORE_NAME);
 				var tmpIndex = tmpObjectStore.index(DB_INDEX);
-				var openCursorRequestMax = tmpIndex.openCursor(null, 'prevunique');
-				var openCursorRequestMin = tmpIndex.openCursor(null, 'nextunique');
 				var maxDB_INDEX = null;
 				var minDB_INDEX = null;
+				var openCursorRequestMax = tmpIndex.openCursor(null, 'prevunique');
+				
+
 
 				openCursorRequestMax.onsuccess = function (event) {
 					if (event.target.result) {
 						maxDB_INDEX = event.target.result.value; //the object with max revision
 						console.log("maxDB_INDEX:　"+　maxDB_INDEX.year);
 						range.max = maxDB_INDEX.year;
+						var openCursorRequestMin = tmpIndex.openCursor(null, 'nextunique');
+						openCursorRequestMin.onsuccess = function (event) {
+							if (event.target.result) {
+								minDB_INDEX = event.target.result.value; //the object with max revision
+								console.log("minDB_INDEX:　"+　minDB_INDEX.year);
+								range.min = minDB_INDEX.year;
+								var tmpData = [];
+								for(var yr = range.min; yr <= range.max; yr++){
+									labels.push(yr);
+									tmpData.push(0);
+								}
+								var datasets = [{
+									backgroundColor: 'rgb(136, 8, 8)',
+									borderColor: 'rgb(255, 99, 132)',
+									data: tmpData,
+									}];
+								data.labels = labels;
+								data.datasets = datasets;
+								config.data =data;
+								chartCanvas = new Chart(
+									document.getElementById("chartCanvas"),
+									config
+								  );
+								//console.log("labels: "+labels.toString());
+							}
+						};
 					}
 				};
-				openCursorRequestMin.onsuccess = function (event) {
-					if (event.target.result) {
-						minDB_INDEX = event.target.result.value; //the object with max revision
-						console.log("minDB_INDEX:　"+　minDB_INDEX.year);
-						range.min = minDB_INDEX.year;
-					}
-				};
+				
 				/*tmpTransaction.oncomplete = function (event) {
 					tmpDb.close();
 					if(callback) //you'll need a calback function to return to your code
@@ -1022,7 +1232,11 @@
 							cursor.value.bubble = document.createElement('div');
 							cursor.value.bubble.className = "bubble-container";
 							var htmlp = document.createElement('p');
+							var htmlspan = document.createElement('span');
+							htmlspan.className = "triangle-isosceles-span";
 							htmlp.className = "triangle-isosceles";
+							htmlp.appendChild(htmlspan);
+							
 							htmlp.innerHTML += "船名: " + cursor.value.shipname + "<br>" ;
 							if (cursor.value.day){
 								htmlp.innerHTML += "啟航: " +  cursor.value.year + "年" + cursor.value.month +  "月"+  cursor.value.day+"日<br>";
@@ -1040,7 +1254,8 @@
 							if(cursor.value.event){htmlp.innerHTML += "事件: " + cursor.value.event + "<br>" };
 							document.body.appendChild(cursor.value.bubble);
 							cursor.value.bubble.appendChild(htmlp);
-							var bubble = new createjs.DOMElement(cursor.value.bubble);
+							var DOMBubble = new createjs.DOMElement(cursor.value.bubble);
+							cursor.value.DOMBubble = DOMBubble;
 							switch(cursor.value.shiptype){//處理不同船形的圖片
 								case "Barca":
 									cursor.value.shipbitmap = new createjs.Bitmap(barca);
@@ -1067,6 +1282,7 @@
 									cursor.value.shipbitmap = new createjs.Bitmap(escuna);
 									htmlp.innerHTML += "船型: 雙桅縱帆船<br>";
 									break;
+								
 								default:
 									cursor.value.shipbitmap = new createjs.Bitmap(ship);
 									break;
@@ -1077,7 +1293,7 @@
 							
 							cursor.value.shipsvg.addChild(cursor.value.shipbitmap);
 							
-							cursor.value.shipsvg.addChild(bubble);
+							cursor.value.shipsvg.addChild(DOMBubble);
 							//console.log("cursor.value.shipsvg.getChildAt(0)"+ cursor.value.shipsvg.getChildAt(0));
 							//console.log("cursor.value.shipsvg.getChildAt(1)"+ cursor.value.shipsvg.getChildAt(1).className);
 							stage.addChild(cursor.value.shipsvg);
@@ -1088,14 +1304,14 @@
 							//console.log("cursor.value.bubble.clientHeight: "+ cursor.value.bubble.clientHeight);
 							cursor.value.shipbitmap.regX = cursor.value.shipbitmap.image.width/2;
 							cursor.value.shipbitmap.regY = 300;
-							bubble.regX = cursor.value.bubble.clientWidth/2;
-							bubble.regY = cursor.value.bubble.clientHeight+50;
-							bubble.alpha = 0;
+							DOMBubble.regX = cursor.value.bubble.clientWidth/2;
+							DOMBubble.regY = cursor.value.bubble.clientHeight+50;
+							DOMBubble.alpha = 0;
 							cursor.value.shipsvg.alpha = 0;
 							
 							switch(cursor.value.specialcase){//處理不同的事件
 								case "1"://船失火，170人死亡後返回澳門。
-									bubble.alpha = 1;
+									DOMBubble.alpha = 1;
 									cursor.value.destination = "澳門";
 									cursor.value.casebitmap = new createjs.Bitmap(fire);									
 									cursor.value.casebitmap.regX = cursor.value.shipbitmap.image.width/2;
@@ -1112,7 +1328,7 @@
 										
 										//casetwo.onload = (cursor.value) =>{
 											//console.log("cursor.value.id: "+cursor.value.id);
-											bubble.alpha = 1;
+											DOMBubble.alpha = 1;
 											cursor.value.casebitmap = new createjs.Bitmap(casetwo);
 											cursor.value.casebitmap.regX = -cursor.value.shipbitmap.image.width/4;
 											cursor.value.casebitmap.regY = 300;
@@ -1120,7 +1336,7 @@
 										//}
 									break;
 								case "3":
-									bubble.alpha = 1;
+									DOMBubble.alpha = 1;
 									cursor.value.shipbitmap.filters = [
 										 new createjs.ColorFilter(0,0.5,0,1, -255,255,-255,1),
 										 new createjs.BlurFilter(10, 10, 1)
@@ -1128,26 +1344,69 @@
 									cursor.value.shipbitmap.cache(0, 0, cursor.value.shipbitmap.image.width,340);
 									break;
 								case "4":
-									bubble.alpha = 1;
+									DOMBubble.alpha = 1;
 									cursor.value.destination = "不老灣";
 									break;
 								case "5":
-									bubble.alpha = 1;
+									DOMBubble.alpha = 1;
 									cursor.value.destination = "經安直港";
 									break;
 								case "6":
-									bubble.alpha = 1;
+									DOMBubble.alpha = 1;
 									cursor.value.destination = "南中國海沉沒";
 									break;
+								case "7":
+									DOMBubble.alpha = 1;
+									cursor.value.destination = "印度支那沉沒";
+									break;
+								case "8"://船行5日暴動，130名華工死亡，未必到達古巴。
+									DOMBubble.alpha = 1;
+									cursor.value.destination = "船行5日暴動後往古巴";
+									break;
+								case "9"://在澳門要塞下3里處，未開船前發生暴動。
+								case "10"://船抵大溪地，僅存162名華工。
+									DOMBubble.alpha = 1;
+									cursor.value.destination = "澳門";
+									cursor.value.casebitmap = new createjs.Bitmap(fist);											
+									cursor.value.casebitmap.regX = cursor.value.shipbitmap.image.width/2;
+									cursor.value.casebitmap.regY = 300;
+									cursor.value.shipsvg.addChild(cursor.value.casebitmap);
+									break;
+								case "11"://大溪地
+									DOMBubble.alpha = 1;
+									cursor.value.destination = "大溪地";
+									break;
+								case "12"://在新西蘭附近華工暴動，船開回澳門。
+									DOMBubble.alpha = 1;
+									cursor.value.destination = "新西蘭回澳";
+									break;
+								case "13"://船在海上被華工焚燬。
+									DOMBubble.alpha = 1;
+									cursor.value.destination = "海上焚燬";
+									break;
+								case "14"://在日本函館被發現，船上餘下42名華工。
+									DOMBubble.alpha = 1;
+									cursor.value.destination = "函館";
+									break;
+									
 							}
 							getFixScale(cursor.value.shipsvg, SHIP_TO_CANVAS_RATIO);
 							shiparray.push(cursor.value);
 							
-							cursor.value.shipsvg.addEventListener("click", () => { 
-								bubble.alpha = 1;
-								createjs.Tween.get(bubble).wait(2000).to({ alpha: 0 }, 1000 );
-
+							cursor.value.shipsvg.addEventListener("click", ()=>{
+								
+								DOMBubble.alpha = 1;
+								createjs.Tween.get(DOMBubble).wait(2000).to({ alpha: 0 }, 1000 );
 							});
+							
+							cursor.value.shipsvg.bubbleShowAWhile = function (){
+								
+								//DOMBubble.regY = cursor.value.bubble.clientHeight+50;
+								
+								//console.log("bubble.regY: "+DOMBubble.regY+ ", cursor.value.bubble.clientHeight;"+cursor.value.bubble.clientHeight);
+								DOMBubble.alpha = 1;
+								createjs.Tween.get(DOMBubble).wait(2000).to({ alpha: 0 }, 1000 );
+							}
 							cursor.continue();
 						} else {
 							console.log('Entries all displayed. Total: '+cursorCounter );
@@ -1206,9 +1465,23 @@
 				}
 			})();
 		};
-		
+		function hidePlqaue(){
+			var oppArray = ["0.9", "0.8", "0.7", "0.6", "0.5", "0.4", "0.3", "0.2", "0.1", "0"];
+			var tmpX = 0;
+			(function next() {
+				document.getElementById('plaqueholder').style.opacity = oppArray[tmpX];
+				if(++tmpX < oppArray.length) {
+					timeoutID = setTimeout(next, 100); //數字消失的速度
+				}else{					
+					document.getElementById('plaqueholder').style.display = 'none'; 
+					document.removeEventListener("mousedown", hidePlqaue);					
+				}
+			})();
+
+		}
 
 		document.addEventListener("DOMContentLoaded", setValue);
+		document.addEventListener("mousedown", hidePlqaue);
 		range.addEventListener('mouseup', setValue);
 		range.addEventListener('touchend', setValue);
 		range.addEventListener('input', changeValue);
@@ -1218,16 +1491,22 @@
 	
       
 </script>
-	<canvas id="myCanvas" style="background-color:white;" >不支援</canvas>
-	<div>
-	
+	<canvas id="mapCanvas" style="background-color:white;" >不支援</canvas>
+	<div id="chartDIV">
+		<canvas id="chartCanvas"  ></canvas>
 	</div>
 	<div>
 
 	
 		<div id = "yearTextField"></div>
 		<input id="range" type="range" step="1">
-	
+		<div id="plaqueholder" >
+			
+			<div style="width: 350px; height:260px; position: absolute; top:50%;  left:50%; transform: translate(-50%, -50%);background-color:#FFFECD;"   >
+				<p style="padding: 25px;" >本賣豬仔船運圖根據憲報和相關研究結果，顯示從澳門出發的豬仔船航行情況。敬請拖拉下方的時間橫軸選擇年份，然後點擊船隻查看航行資料，也可使用滑鼠滾輪和觸屏手勢縮放地圖。</p>
+			</div>
+			<img class= "plaque" src="plaque.png" width="579px"></img>
+		</div>
 		
 		
 		
