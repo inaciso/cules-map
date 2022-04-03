@@ -183,7 +183,7 @@
 		const DB_VERSION =1;
 		const DB_STORE_NAME = "journeys";
 		const DB_INDEX = "year";
-		const SHIP_TO_CANVAS_RATIO = 0.1;
+		
     	const MACAU = {x: 1102, y: 2357};
 		const TAIWAN_STRAIT = {x: 1242,y:2289};
 		const JAPANSEA = {x: 1392,y:2280};
@@ -225,8 +225,10 @@
 		Chart.register(ChartDataLabels);
 		if(innerWidth>window.innerHeight){
 			Chart.defaults.font.size = 40;
+			const SHIP_TO_CANVAS_RATIO = 0.1;
 		}else{
 			Chart.defaults.font.size = 20;
+			const SHIP_TO_CANVAS_RATIO = 0.3;
 		}
 		var config = {
 			type: 'bar',
