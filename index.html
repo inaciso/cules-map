@@ -109,7 +109,7 @@
 			border: 1vh solid #999; /* 1 */
 		}
 		.bubble-container{
-			width: max(60vw, 60vh);
+			width: max(60vw, 80vh);
 			margin: 0 auto;
 			position: absolute;
 			top:0;
@@ -223,7 +223,11 @@
 		var labels=[];
 		var data = {};
 		Chart.register(ChartDataLabels);
-		Chart.defaults.font.size = 40;
+		if(innerWidth>window.innerHeight){
+			Chart.defaults.font.size = 40;
+		}else{
+			Chart.defaults.font.size = 20;
+		}
 		var config = {
 			type: 'bar',
 			options: {
