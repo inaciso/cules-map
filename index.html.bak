@@ -109,7 +109,7 @@
 			border: 1vh solid #999; /* 1 */
 		}
 		.bubble-container{
-			width: 60vw;
+			width: max(60vw, 80vh);
 			margin: 0 auto;
 			position: absolute;
 			top:0;
@@ -177,13 +177,14 @@
 		var db;
 		var shiparray = [];
 		var counter = 0;
+		var SHIP_TO_CANVAS_RATIO = 0.1;
 		//var tween;
 		//var tween2;
 		const DB_NAME = "culeship-indexeddb";
 		const DB_VERSION =1;
 		const DB_STORE_NAME = "journeys";
 		const DB_INDEX = "year";
-		const SHIP_TO_CANVAS_RATIO = 0.1;
+		
     	const MACAU = {x: 1102, y: 2357};
 		const TAIWAN_STRAIT = {x: 1242,y:2289};
 		const JAPANSEA = {x: 1392,y:2280};
@@ -211,9 +212,10 @@
 		const HAVANA= {x: 4456, y: 2321};
 		const ADELAIDE = {x: 1592, y:3631};
 		const range = document.getElementById("range");
+		var changeValueDisplayText = false;
 		const yearTextField = document.getElementById("yearTextField");
 		const monthTime = 1000;//這個變數主要控制航行的時間
-		const ARRIVALTIME = 3000;
+		const ARRIVALTIME = 3000;//這個變數用於控制船隻到達後,停留多久才會消息。
 		//var zoom;
 		var oddEven = true;//這個變數用來控制triangle-isosceles是否向上
 		var PATHALL=[];
@@ -223,7 +225,13 @@
 		var labels=[];
 		var data = {};
 		Chart.register(ChartDataLabels);
-		Chart.defaults.font.size = 40;
+		if(innerWidth>window.innerHeight){
+			Chart.defaults.font.size = 40;
+			
+		}else{
+			Chart.defaults.font.size = 20;
+			SHIP_TO_CANVAS_RATIO = 0.3;
+		}
 		var config = {
 			type: 'bar',
 			options: {
@@ -1234,7 +1242,7 @@
 			
 			
 			for(var tmpNum = 0; tmpNum < labels.length; tmpNum++){
-				if(labels[tmpNum] == array.year && array.cules){
+				if(labels[tmpNum] == array.year && array.cules && array.shipsvg.canAddCules){
 					chartCanvas.data.datasets[0].data[tmpNum] -= Math.floor(array.cules);
 					chartCanvas.options.plugins.datalabels.display = true;
 					//console.log("chartCanvas.data.datasets[0].data["+tmpNum+"]: "+chartCanvas.data.datasets[0].data[tmpNum]);
@@ -1312,7 +1320,7 @@
 								var tmpData = [];
 								for(var yr = range.min; yr <= range.max; yr++){
 									labels.push(yr);
-									tmpData.push(0);
+									tmpData.push(0);//將chart一開始時全部設為零。
 								}
 								var datasets = [{
 									backgroundColor: 'rgb(136, 8, 8)',
@@ -1588,6 +1596,12 @@
 									break;
 									
 							}
+							for(var tmpNum = 0; tmpNum < labels.length; tmpNum++){
+								if(labels[tmpNum] == cursor.value.year && chartCanvas.data.datasets[0].data[tmpNum]==0){			
+									cursor.value.shipsvg.canAddCules = true;
+								}
+							}
+							
 							getFixScale(cursor.value.shipsvg, SHIP_TO_CANVAS_RATIO);
 							shiparray.push(cursor.value);
 							
@@ -1606,7 +1620,11 @@
 								createjs.Tween.get(DOMBubble).wait(2000).to({ alpha: 0 }, 1000 );
 							}
 							cursor.continue();
-						} else {
+						}else{
+							if(cursorCounter==0){
+								changeValueDisplayText = true;
+								changeValue();
+							}
 							console.log('Entries all displayed. Total: '+cursorCounter );
 							//tmpCounter = 0;
 							//console.log("shiparray.toString(): "+ shiparray.toString());
@@ -1646,8 +1664,17 @@
 		
 
 		function changeValue(){
+			if(changeValueDisplayText){
+				console.log("yearTextField.style.fontSize: "+yearTextField.style.fontSize);
 
-			yearTextField.innerHTML = range.value ;
+				//yearTextField.style.fontSize = "20vw";
+				yearTextField.innerHTML += "<span style='font-size: 10vw';>沒資料</span>";
+				
+				changeValueDisplayText = false;
+			}else{
+				yearTextField.innerHTML = range.value;
+				
+			}
 			var oppArray = ["0.9", "0.8", "0.7", "0.6", "0.5", "0.4", "0.3", "0.2", "0.1", "0"];
 			var tmpX = 0;
 			yearTextField.style.visibility = "visible";
