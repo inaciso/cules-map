@@ -23,19 +23,19 @@
 		}
 		#chartDiv{
 			position:fixed;
-			width:50vw !important;
+			width:80vw !important;
 			height: 10vh !important;
 			bottom:0vh;
-			left:25vw;
+			left:10vw;
 			border-radius: 0; /* iOS */
 			z-index: 997;
 		}
 		#chartCanvas{
 			position:fixed;
-			width:50vw !important;
+			width:80vw !important;
 			height: 10vh !important;
 			bottom:0vh;
-			left:25vw;
+			left:10vw;
 			border-radius: 0; /* iOS */
 			z-index: 998;
 			
@@ -67,9 +67,9 @@
 
 		input[type="range"] { 
 			position:fixed;
-			width:50vw;
+			width:80vw;
 			bottom:10vh;
-			left:25vw;	
+			left:10vw;	
 			z-index: 999;
 			margin: auto;
 			-webkit-appearance: none;			
@@ -129,26 +129,26 @@
 		.triangle-isosceles-span{
 			content: "";
 			position: absolute;
-			bottom: -2vw;/* 如果改為top,變成向上 */
-			left:26vw;
+			bottom: min(-4vw, -4vh);/* 如果改為top,變成向上 */
+			left: max(26vw, 34vh);
 			display:block;
 			width:0;
 			height: 0;		  
-			border-top: 2vw solid #DDDCB2;/* 如果改為bottom,變成向上 */		  
-			border-left: 2vw solid transparent;
-			border-right: 2vw solid transparent;		  
+			border-top: max(4vw, 4vh) solid #DDDCB2;/* 如果改為bottom,變成向上 */		  
+			border-left: max(4vw, 4vh) solid transparent;
+			border-right: max(4vw, 4vh) solid transparent;		  
 		}
 		.triangle-isosceles-span-up{
 			content: "";
 			position: absolute;
-			top: -2vw;/* 如果改為top,變成向上 */
-			left:26vw;
+			top: min(-4vw, -4vh);/* 如果改為top,變成向上 */
+			left:max(26vw, 34vh);
 			display:block;
 			width:0;
 			height: 0;		  
-			border-bottom: 2vw solid #DDDCB2;/* 如果改為bottom,變成向上 */		  
-			border-left: 2vw solid transparent;
-			border-right: 2vw solid transparent;		  
+			border-bottom: max(4vw, 4vh) solid #DDDCB2;/* 如果改為bottom,變成向上 */		  
+			border-left: max(4vw, 4vh) solid transparent;
+			border-right: max(4vw, 4vh) solid transparent;		  
 		}
 		
 	</style>
@@ -214,65 +214,14 @@
 		const range = document.getElementById("range");
 		var changeValueDisplayText = false;
 		const yearTextField = document.getElementById("yearTextField");
-		const monthTime = 1000;//這個變數主要控制航行的時間
+		var timeoutID;
+		const monthTime = 2500;//這個變數主要控制航行的時間
 		const ARRIVALTIME = 3000;//這個變數用於控制船隻到達後,停留多久才會消息。
 		//var zoom;
 		var oddEven = true;//這個變數用來控制triangle-isosceles是否向上
 		var PATHALL=[];
 		
-		//以下用於圖表中
-		var chartAspectRatio = 0.5*window.innerWidth/(0.1*window.innerHeight);
-		var labels=[];
-		var data = {};
-		Chart.register(ChartDataLabels);
-		if(innerWidth>window.innerHeight){
-			Chart.defaults.font.size = 40;
-			
-		}else{
-			Chart.defaults.font.size = 20;
-			SHIP_TO_CANVAS_RATIO = 0.3;
-		}
-		var config = {
-			type: 'bar',
-			options: {
-				maintainAspectRatio: true,
-				aspectRatio: chartAspectRatio,
-				scales: {
-					xAxes: {
-						ticks: {
-							display: false,
-						}
-					},
-					yAxes: {
-						display: false
-					},
-				},
-
-
-				plugins:{
-					legend:{
-						display:false,
-					},
-					tooltip:{
-						enabled: false,
-
-					},
-					datalabels: {
-						 clamp: true,
-						 display: false,//最初要隱藏
-						 align: 'start',
-						 anchor: 'end',
-						 rotation: 90,
-						 formatter: function(value, context) {
-						  return context.chart.data.labels[context.dataIndex];
-						}
-					  },
-				}
-			}
-		};
-
-		var chartCanvas;
-		//以上用於圖表中
+		
 		var bitmap;
 		var canvas= document.getElementById("mapCanvas");
 		canvas.width = window.innerWidth;
@@ -321,6 +270,86 @@
 		var prevDiff = -1;
 		var touchMoveTimes = 0;
 		//barcaone.src = "barca1.png"
+		
+		//以下用於圖表中
+		var pixelOfTenPercentInnerHeight = 0.1*window.innerHeight;
+		var pixelOfHalfInnerWidth = 0.8*window.innerWidth;
+		var chartAspectRatio = pixelOfHalfInnerWidth/pixelOfTenPercentInnerHeight;
+		Chart.register(ChartDataLabels);
+		Chart.defaults.font.family = "'Brush Script MT' , 'Garamond' , 'Georgia' , 'Times New Roman'";
+		var chartCanvasID = document.getElementById("chartCanvas");
+		/*var ctx = chartCanvasID.getContext("2d");//以下是控制字體大小的方法一,但這個方法在直屏不太可行
+		ctx.fontStyle = "Brush Script MT";
+		var fontSize = 31;
+		do{
+			ctx.fontSize =  (fontSize - 1) + 'px';
+		}while(ctx.measureText("1870").width >pixelOfTenPercentInnerHeight);*/
+		var div = document.createElement("div");
+		var fontSize = 100;
+		var fontArray = [];
+			div.innerHTML = "1870";
+			div.style.position = "absolute";
+			div.style.top  = "-9999px";
+			div.style.left = "-9999px";
+			div.style.fontFamily = "'Brush Script MT' , 'Garamond' , 'Georgia' , 'Times New Roman'";
+		do{
+			fontSize--;
+			
+			div.style.fontSize = fontSize + "px"; 
+			document.body.appendChild(div);
+			fontArray = [ div.offsetWidth, div.offsetHeight ];
+			console.log("fontSize: "+fontSize+"& fontArray[0]: "+fontArray[0]+"& fontArray[1]:"+ fontArray[1]+"& pixelOfTenPercentInnerHeight:"+pixelOfTenPercentInnerHeight);
+			document.body.removeChild(div);
+		}while(fontArray[0]>pixelOfTenPercentInnerHeight ||fontArray[1]> (pixelOfHalfInnerWidth/24));
+		
+		var labels=[];
+		var data = {};
+		Chart.register(ChartDataLabels);
+		Chart.defaults.font.size = fontSize;
+		if(innerWidth<window.innerHeight){
+			
+			SHIP_TO_CANVAS_RATIO = 0.35;
+		}
+		var config = {
+			type: 'bar',
+			options: {
+				maintainAspectRatio: true,
+				aspectRatio: chartAspectRatio,
+				scales: {
+					xAxes: {
+						ticks: {
+							display: false,
+						}
+					},
+					yAxes: {
+						display: false
+					},
+				},
+
+
+				plugins:{
+					legend:{
+						display:false,
+					},
+					tooltip:{
+						enabled: false,
+
+					},
+					datalabels: {
+						 clamp: true,
+						 display: false,//最初要隱藏
+						 align: 'start',
+						 anchor: 'end',
+						 rotation: 90,
+						 formatter: function(value, context) {
+						  return context.chart.data.labels[context.dataIndex];
+						}
+					  },
+				}
+			}
+		};
+		var chartCanvas;
+		//以上用於圖表中
 		function handleImageLoad(){
 			bitmap = new createjs.Bitmap(image);
 			if(canvas.width>canvas.height){
@@ -769,11 +798,11 @@
 			smootharray.push(p);
 			var offset={x:stage.x-p.x,y:stage.y-p.y};	
 			//var beforeScreen = {x: e.screenX, y:e.screenY};
-			//console.log("pointerDown", e);
+			console.log("pointerDown", e);
 			//console.log("stage.x: " + stage.x+", "+"stage.y: " + stage.y);
-			console.log("p.x: " + p.x+", "+"p.y: " + p.y);
+			//console.log("p.x: " + p.x+", "+"p.y: " + p.y);
 			//console.log("offset.x: "+offset.x +", offset.y:"+ offset.y);
-			console.log("stage.mouseX: "+stage.mouseX+", stage.mouseY:"+stage.mouseY);
+			//console.log("stage.mouseX: "+stage.mouseX+", stage.mouseY:"+stage.mouseY);
 			canvas.addEventListener("pointerup",pointerup_handler);
 			canvas.addEventListener("pointercancel",pointerup_handler);
 			canvas.addEventListener("pointerleave",pointerup_handler);
@@ -807,12 +836,13 @@
 					}
 				}
 				
-				 //console.log("pointerMove", ev);
+				 console.log("pointerMove", ev);
 				 
 				 // Find this event in the cache and update its record with this event
 				 for (var i = 0; i < evCache.length; i++) {
 				   if (ev.pointerId == evCache[i].pointerId) {
 					  evCache[i] = ev;
+					  console.log("evCache["+i+"]: "+ ev);
 				   break;
 				   }
 				 }
@@ -822,22 +852,22 @@
 				   // Calculate the distance between the two pointers
 				   var curDiff = Math.sqrt(Math.pow(evCache[0].screenX - evCache[1].screenX, 2)+Math.pow(evCache[0].screenY - evCache[1].screenY, 2));
 					var zoom =curDiff/prevDiff;
-					//console.log("touchMoveTimes: "+ touchMoveTimes+ "; zoom: " + zoom +"; curDiff: "+curDiff+"; prevDiff: "+prevDiff);
+					console.log("touchMoveTimes: "+ touchMoveTimes+ "; zoom: " + zoom +"; curDiff: "+curDiff+"; prevDiff: "+prevDiff);
 					
 				   if (prevDiff > 0) {
 					doZoom(zoom);
-					 /*if (curDiff > prevDiff) {
+					 if (curDiff > prevDiff) {
 					   // The distance between the two pointers has increased
 					   console.log("Pinch moving OUT -> Zoom in", ev);
-					   ev.preventDefault();
+					   //ev.preventDefault();
 						
 					 }
 					 if (curDiff < prevDiff) {
-						ev.preventDefault();
+						//ev.preventDefault();
 					   // The distance between the two pointers has decreased
 					   console.log("Pinch moving IN -> Zoom out",ev);
 
-					 }*/
+					 }
 				   }
 
 				   // Cache the distance for the next move event
@@ -888,12 +918,8 @@
 			 }
 			function pointerup_handler(ev) {
 			  //console.log(ev.type, ev);
-				canvas.removeEventListener("pointermove", pointermove_handler);
-				canvas.removeEventListener("pressmove", pointermove_handler);
-				canvas.removeEventListener("pointerup",pointerup_handler);
-				canvas.removeEventListener("pointercancel",pointerup_handler);
-				canvas.removeEventListener("pointerleave",pointerup_handler);
-				canvas.removeEventListener("pointerout",pointerup_handler);
+			  console.log("pointerUp", ev);
+
 			   //clearInterval(pointermove_handler);
 			  // Remove this pointer from the cache and reset the target's
 				
@@ -908,6 +934,14 @@
 			  // If the number of pointers down is less than two then reset diff tracker
 			  if (evCache.length < 2) {
 				prevDiff = -1;
+				if(evCache.length < 1){
+					canvas.removeEventListener("pointermove", pointermove_handler);
+					canvas.removeEventListener("pressmove", pointermove_handler);
+					canvas.removeEventListener("pointerup",pointerup_handler);
+					canvas.removeEventListener("pointercancel",pointerup_handler);
+					canvas.removeEventListener("pointerleave",pointerup_handler);
+					canvas.removeEventListener("pointerout",pointerup_handler);
+				}
 			  }
 			}
 			
@@ -930,7 +964,11 @@
 		
 		
 		function tick(event) {
-		  stage.update(event);		  
+			stage.sortChildren(sortByZ);
+			function sortByZ(a,b) {
+				return a.y - b.y;
+			}
+			stage.update(event);		  
 		}
 		function handleResize(event) {
 				//console.log("resized");
@@ -1010,7 +1048,7 @@
 					var pos = shiparray[i].tween ? shiparray[i].tween.rawPosition : 0;
 					//var tmptmp = shiparray[i].month-earliestMonth;
 					//console.log("shiparray[i].month: "+tmptmp);
-					var month = shiparray[i].month ? (shiparray[i].month-earliestMonth)*monthTime : i*monthTime/20;
+					var month = shiparray[i].month ? (shiparray[i].month-earliestMonth)*monthTime : i*monthTime;
 					month += shiparray[i].day ? shiparray[i].day*monthTime/30 : i*monthTime/600;
 					
 					var journeyTimeE = monthTime*4;
@@ -1038,18 +1076,18 @@
 						case "卡亞俄":
 						case "秘魯":
 						case "利馬":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path:tmppath[0], orient: "auto"}},journeyTimeE).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path:tmppath[0]}},journeyTimeE).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
 							break;
 						case "舊金山":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[3], orient: "auto"}},journeyTimeE).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[3]}},journeyTimeE).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
 							break;
 						case "阿德雷德":
 						
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[4], orient: "auto"}},monthTime*1.5).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[4]}},monthTime*1.5).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
 							break;
@@ -1095,7 +1133,7 @@
 							shiparray[i].tween.setPosition(pos);
 							break;
 						case "哥斯達黎加":
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[14], orient: "auto"}},journeyTimeE).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[14]}},journeyTimeE).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
 							break;
@@ -1174,7 +1212,7 @@
 							break;
 						default://其他航線**************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************
 							//記得不可亂插入
-							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path:tmppath[15], orient: "auto"}},monthTime).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path:tmppath[15]}},monthTime).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
 							//記得不可亂插入
 							shiparray[i].tween.setPosition(pos);
 							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
@@ -1222,13 +1260,13 @@
 				var htmlspan = document.createElement('span');
 				htmlspan.className = "triangle-isosceles-span";
 				htmlp[0].appendChild(htmlspan);
-				array.DOMBubble.regY = array.bubble.clientHeight+50;
+				array.DOMBubble.regY = array.bubble.clientHeight+array.shipbitmap.image.height/6.8;
 			}else{
 				oddEven = true;
 				var htmlspan = document.createElement('span');
 				htmlspan.className = "triangle-isosceles-span-up";
 				htmlp[0].appendChild(htmlspan);
-				array.DOMBubble.regY = 0;
+				array.DOMBubble.regY = 0-array.shipbitmap.image.height/6.8;
 				 //var htmlafter = window.getComputedStyle(htmlp[0], ":after").getPropertyValue("content");
 				//var htmlafter =  array.bubble.getElementsByClassName("triangle-isosceles:after");
 				//console.log("htmlafter: "+htmlafter);
@@ -1331,7 +1369,7 @@
 								data.datasets = datasets;
 								config.data =data;
 								chartCanvas = new Chart(
-									document.getElementById("chartCanvas"),
+									chartCanvasID,
 									config
 								  );
 								//console.log("labels: "+labels.toString());
@@ -1452,13 +1490,13 @@
 							//stage.addChild(cursor.value.shipsvg);
 							
 							//console.log("cursor.value.bubble.clientWidth: "+ cursor.value.bubble.clientWidth);
-							//console.log("cursor.value.bubble.clientHeight: "+ cursor.value.bubble.clientHeight);
+							console.log("cursor.value.bubble.clientHeight: "+ cursor.value.bubble.clientHeight);
 							cursor.value.shipbitmap.regX = cursor.value.shipbitmap.image.width/2;
-							cursor.value.shipbitmap.regY = 300;
+							cursor.value.shipbitmap.regY = cursor.value.shipbitmap.image.height/1.13;
 							//hit.regX = cursor.value.shipbitmap.image.width/2;
 							//hit.regY = 300;
 							DOMBubble.regX = cursor.value.bubble.clientWidth/2;
-							DOMBubble.regY = cursor.value.bubble.clientHeight+50;
+							DOMBubble.regY = cursor.value.bubble.clientHeight+cursor.value.shipbitmap.image.height/6.8;
 							DOMBubble.alpha = 0;
 							cursor.value.shipsvg.alpha = 0;
 							
@@ -1664,25 +1702,29 @@
 		
 
 		function changeValue(){
+			clearTimeout(timeoutID);
 			if(changeValueDisplayText){
-				console.log("yearTextField.style.fontSize: "+yearTextField.style.fontSize);
+				//console.log("yearTextField.style.fontSize: "+yearTextField.style.fontSize);
 
 				//yearTextField.style.fontSize = "20vw";
-				yearTextField.innerHTML += "<span style='font-size: 10vw';>沒資料</span>";
-				
+				if(innerWidth>window.innerHeight){
+					yearTextField.innerHTML += "<div style='font-size: 7vw; position: absolute; top:55vh;left:0vw; width:100vw; text-align: center';>沒資料</div>";
+				}else{
+					yearTextField.innerHTML += "<div  style='font-size: 20vw';>沒資料</div>";
+				}
 				changeValueDisplayText = false;
 			}else{
 				yearTextField.innerHTML = range.value;
 				
 			}
-			var oppArray = ["0.9", "0.8", "0.7", "0.6", "0.5", "0.4", "0.3", "0.2", "0.1", "0"];
+			var oppArray = ["0.95","0.9","0.85", "0.8", "0.75","0.7", "0.65","0.6", "0.55","0.5", "0.45","0.4", "0.35","0.3", "0.25","0.2", "0.15","0.1", "0.5","0"];
 			var tmpX = 0;
 			yearTextField.style.visibility = "visible";
 
 			(function next() {
 				yearTextField.style.opacity = oppArray[tmpX];
 				if(++tmpX < oppArray.length) {
-					timeoutID = setTimeout(next, 100); //數字消失的速度
+					timeoutID = setTimeout(next, 200); //數字消失的速度
 				}else{
 					
 					yearTextField.style.visibility = "hidden";
@@ -1696,7 +1738,7 @@
 			(function next() {
 				document.getElementById('plaqueholder').style.opacity = oppArray[tmpX];
 				if(++tmpX < oppArray.length) {
-					timeoutID = setTimeout(next, 100); //數字消失的速度
+					var timeoutID2 = setTimeout(next, 100); //數字消失的速度
 				}else{					
 					document.getElementById('plaqueholder').style.display = 'none'; 
 					document.removeEventListener("pointerdown", hidePlqaue);					
