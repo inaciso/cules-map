@@ -17,9 +17,9 @@
 			border:0 none;
 			overflow:hidden;
 		}
-		#mapCanvas{
+		#mapCanvas{			
 			width: 100vw;
-			height: 100vh;
+			height: 100vh;			
 		}
 		#chartDiv{
 			position:fixed;
@@ -47,6 +47,7 @@
 			margin-left: -290px; /* Half the width */
 			margin-top: -250px;
 		}
+	
 		#yearTextField{		
 			font-family:   Brush Script MT , Garamond , Georgia , Times New Roman;
 			position: absolute;
@@ -109,7 +110,7 @@
 			border: 1vh solid #999; /* 1 */
 		}
 		.bubble-container{
-			width: max(60vw, 80vh);
+			width: max(65vw, 107vh);
 			margin: 0 auto;
 			position: absolute;
 			top:0;
@@ -177,9 +178,12 @@
 		var db;
 		var shiparray = [];
 		var counter = 0;
-		var SHIP_TO_CANVAS_RATIO = 0.1;
-		//var tween;
-		//var tween2;
+		if(innerWidth<window.innerHeight){			
+			var SHIP_TO_CANVAS_RATIO = 0.25;
+		}else{
+			var SHIP_TO_CANVAS_RATIO = 0.1;
+		}
+
 		const DB_NAME = "culeship-indexeddb";
 		const DB_VERSION =1;
 		const DB_STORE_NAME = "journeys";
@@ -215,8 +219,13 @@
 		var changeValueDisplayText = false;
 		const yearTextField = document.getElementById("yearTextField");
 		var timeoutID;
-		const monthTime = 2500;//這個變數主要控制航行的時間
-		const ARRIVALTIME = 3000;//這個變數用於控制船隻到達後,停留多久才會消息。
+		var pointerDownLog = 0;
+		var plaqueStep = 0;
+		var doubleClicked = -999;//負999代表這個變數沒有狀況
+		const monthTime = 3500;//這個變數主要控制航行的時間
+		const ARRIVALTIME = 2000;//這個變數用於控制船隻到達後,停留多久才會消失。
+		const BUBBLESHOWAWHILEWAIT = 2000;//這個變數用於控制船隻發佈訊息的時間。
+		const BUBBLESHOWAWHILEVANISH = 500;//這個變數用於控制船隻訊息,停留多久才會消失。
 		//var zoom;
 		var oddEven = true;//這個變數用來控制triangle-isosceles是否向上
 		var PATHALL=[];
@@ -237,6 +246,7 @@
 		var brigue = new Image();
 		var lorcha = new Image();
 		var escuna = new Image();
+		var taumao = new Image();
 		var casetwo = new Image();
 		var fire = new Image();
 		
@@ -247,7 +257,8 @@
 		var woman = new Image();
 		var inquestion = new Image();
 		var knife = new Image();
-		//var barcaone = new Image();
+		var selector = new Image();
+
 		ship.src = "ship.png";
 		barca.src = "barca.png";
 		galera.src = "galera.png";
@@ -255,6 +266,7 @@
 		brigue.src = "brigue.png";
 		lorcha.src = "lorcha.png";
 		escuna.src = "escuna.png";
+		taumao.src ="taumao.png";
 		fire.src="fire.png";
 		
 		fist.src = "fist.png";
@@ -265,56 +277,31 @@
 		woman.src = "woman.png";
 		inquestion.src = "inquestion.png";
 		knife.src = "knife.png";
+		selector.src = "selector.png";
 		var settingValue = false;
 		var evCache = new Array();//用於手勢放大
 		var prevDiff = -1;
 		var touchMoveTimes = 0;
-		//barcaone.src = "barca1.png"
+
 		
 		//以下用於圖表中
-		var pixelOfTenPercentInnerHeight = 0.1*window.innerHeight;
-		var pixelOfHalfInnerWidth = 0.8*window.innerWidth;
-		var chartAspectRatio = pixelOfHalfInnerWidth/pixelOfTenPercentInnerHeight;
-		Chart.register(ChartDataLabels);
+
+		var chartAspectRatio = 0.8*window.innerWidth/(0.1*window.innerHeight);
+		
 		Chart.defaults.font.family = "'Brush Script MT' , 'Garamond' , 'Georgia' , 'Times New Roman'";
 		var chartCanvasID = document.getElementById("chartCanvas");
-		/*var ctx = chartCanvasID.getContext("2d");//以下是控制字體大小的方法一,但這個方法在直屏不太可行
-		ctx.fontStyle = "Brush Script MT";
-		var fontSize = 31;
-		do{
-			ctx.fontSize =  (fontSize - 1) + 'px';
-		}while(ctx.measureText("1870").width >pixelOfTenPercentInnerHeight);*/
-		var div = document.createElement("div");
-		var fontSize = 30;
-		var fontArray = [];
-			div.innerHTML = "1870";
-			div.style.position = "absolute";
-			div.style.top  = "-9999px";
-			div.style.left = "-9999px";
-			div.style.fontFamily = "'Brush Script MT' , 'Garamond' , 'Georgia' , 'Times New Roman'";
-		do{
-			fontSize--;
-			
-			div.style.fontSize = fontSize + "px"; 
-			document.body.appendChild(div);
-			fontArray = [ div.offsetWidth, div.offsetHeight ];
-			console.log("fontSize: "+fontSize+"& fontArray[0]: "+fontArray[0]+"& fontArray[1]:"+ fontArray[1]+"& pixelOfTenPercentInnerHeight:"+pixelOfTenPercentInnerHeight);
-			document.body.removeChild(div);
-		}while(fontArray[0]>pixelOfTenPercentInnerHeight ||fontArray[1]> (pixelOfHalfInnerWidth/24));
-		
 		var labels=[];
 		var data = {};
 		Chart.register(ChartDataLabels);
-		Chart.defaults.font.size = fontSize;
-		if(innerWidth<window.innerHeight){
-			
-			SHIP_TO_CANVAS_RATIO = 0.35;
-		}
+
+
+		
 		var config = {
 			type: 'bar',
 			options: {
 				maintainAspectRatio: true,
 				aspectRatio: chartAspectRatio,
+				responsive:true,
 				scales: {
 					xAxes: {
 						ticks: {
@@ -341,6 +328,7 @@
 						 align: 'start',
 						 anchor: 'end',
 						 rotation: 90,
+
 						 formatter: function(value, context) {
 						  return context.chart.data.labels[context.dataIndex];
 						}
@@ -361,8 +349,7 @@
 			}
 			stage.addChild(bitmap);
 			stage.update();
-			//var shipsvg = new createjs.Bitmap(ship);
-			//var shipsvg2 = new createjs.Bitmap(ship);
+
 			
 			PATHALL.push([ //PATHALL[0]：去卡亞俄
 			  MACAU.x/image.width, MACAU.y/image.height,
@@ -626,6 +613,13 @@
 				1265/image.width, 2403/image.height,
 				MACAU.x/image.width, MACAU.y/image.height,
 			]);
+			PATHALL.push([ //PATHALL[37]：曼谷	
+				MACAU.x/image.width, MACAU.y/image.height,
+				1036/image.width, 2549/image.height,
+				971/image.width, 2708/image.height,
+				866/image.width, 2623/image.height,
+				851/image.width, 2556/image.height,
+			]);
 		}
 
 		if (!window.indexedDB) {
@@ -637,7 +631,7 @@
 			
 		}
 		async function loadJson() {
-		  const requestURL = 'jsonship_v1.json';//注意,有時瀏覽器會自行取舊的檔案,所以每次更新,應順便更新v後的數字，迫瀏覽器重新取檔案。
+		  const requestURL = 'jsonship_v2.json';//注意,有時瀏覽器會自行取舊的檔案,所以每次更新,應順便更新v後的數字，迫瀏覽器重新取檔案。
 		  const request = new Request(requestURL);
 		  const response = await fetch(request);
 		  const jsonship = await response.json();
@@ -647,18 +641,17 @@
 		}
 		function deleteDB(jsonship){//已經不用的程式碼，用於手動地清除DB
 				var DBDeleteRequest = window.indexedDB.deleteDatabase(DB_NAME);
-				//var request = objectStore.clear();
+
 				DBDeleteRequest.onblocked = function(event) {
 					 console.log("Error message: Database in blocked state. ");
 				};
 				DBDeleteRequest.onerror = function(event) {
-				  console.log("Error deleting database.");
+				 console.log("Error deleting database.");
 				};
 
 				DBDeleteRequest.onsuccess = function(event) {
-				  console.log("Database deleted successfully");
 					openDb(jsonship);
-				  //console.log(request.result); // should be null
+				   console.log(request.result); // 正常為null
 				};
 		}
 
@@ -671,7 +664,6 @@
 				var transaction = db.transaction(DB_STORE_NAME, 'readwrite');
 				var objectStore = transaction.objectStore(DB_STORE_NAME);
 				for (i = 0; i < jsonship.jsonship.length; i++) { 
-					//console.log(jsonship.jsonship[i]);
 					objectStore.put(jsonship.jsonship[i]);
 				}
 				getMaxMinNumber();
@@ -694,28 +686,7 @@
 			};
 		}
 		
-		/*
-		shiparray.push(shipsvg);
-		shiparray.push(shipsvg2);
-		//shipsvg.image = ship;
-		
-		//stageY = ;
-		stage.addChild(bitmap);
-		stage.addChild(shipsvg);
-		stage.addChild(shipsvg2);
-		getFixScale(shipsvg, SHIP_TO_CANVAS_RATIO);
-		getFixScale(shipsvg2, SHIP_TO_CANVAS_RATIO);
-		shipsvg.regX = 122;
-		shipsvg.regY = 112;
-		shipsvg2.regX = 122;
-		shipsvg2.regY = 112;
-		*/
 
-		
-				//shipsvg.x = MACAU.x;
-		//shipsvg.y = MACAU.y;
-		//stage.update();	
-		//handleResize();
 		createjs.Touch.enable(stage);
 		canvas.addEventListener("mousewheel", MouseWheelHandler, false);
 		canvas.addEventListener("DOMMouseScroll", MouseWheelHandler, false);
@@ -726,7 +697,7 @@
 					try{
 						e.preventDefault();
 					}catch (error){
-						 console.log("error in ev.preventDefault: "+error);
+						 //console.log("error in ev.preventDefault: "+error);
 					}
 			}
 			const {ctrlKey } = e
@@ -743,6 +714,33 @@
 			doZoom(zoom);
 		}
 		function doZoom(zoom){
+			// 尋找stage內的滑鼠位置
+			let point = new createjs.Point(stage.mouseX, stage.mouseY);
+			let localPoint = stage.globalToLocal(point.x, point.y);
+
+			//縮放
+
+			let tmpHeight = image.height*stage.scaleY*bitmap.scaleY*0.9;
+			if(tmpHeight<=canvas.height&&zoom<1){	
+				zoom=1;
+				stage.x =0;
+				stage.y =0;
+				//stage.scaleY = bitmap.scaleY;
+			}else{			
+				stage.scaleX=stage.scaleY*=zoom;
+				// 重新找尋原點
+				var globalPoint = stage.localToGlobal(localPoint.x, localPoint.y);
+				// 將地圖移至合適位置
+				stage.x -= (globalPoint.x - point.x);
+				stage.y -= (globalPoint.y - point.y);
+			}
+			for (let i = 0; i < shiparray.length ; i++){
+				//console.log("shiparray: "+shiparray[i]);
+				getFixScale(shiparray[i].shipsvg, SHIP_TO_CANVAS_RATIO);
+			}
+			stage.update();
+		}
+		/*function doZoom(zoom){//舊版本，導致regX變化
 			var local = stage.globalToLocal(stage.mouseX, stage.mouseY);
 			stage.regX=local.x;
 			
@@ -775,45 +773,20 @@
 				getFixScale(shiparray[i].shipsvg, SHIP_TO_CANVAS_RATIO);
 			}
 			stage.update();
-		}
+		}*/
 		function getFixScale(obj, s){
-			var tmpImg = obj.getChildAt(0).image;
-			
-			obj.scaleX = s * canvas.width / ( obj.parent.scaleX * tmpImg.width );
-			//obj.scaleX = s * canvas.width / ( obj.parent.scaleX * 500 );
-			obj.scaleY = obj.scaleX;
-			//console.log(obj.parent+".scaleX: "+obj.parent.scaleX +obj.parent.scaleX+", obj.scaleX: "+ obj.scaleX+", Img: "+ tmpImg.src);
+			var tmpImg = obj.getChildAt(0).image;			
+			obj.scaleX = s * canvas.width / ( obj.parent.scaleX * tmpImg.width );	
+			obj.scaleY = obj.scaleX;			
 		}
 		
 		canvas.addEventListener("pointerdown", function(e){
-			
-			
-			evCache.push(e);
-			var p = stage.globalToLocal(e.screenX, e.screenY);
-			var smootharray = [];
-			smootharray.push(p);
-			smootharray.push(p);
-			smootharray.push(p);
-			smootharray.push(p);
-			smootharray.push(p);
-			var offset={x:stage.x-p.x,y:stage.y-p.y};	
-			//var beforeScreen = {x: e.screenX, y:e.screenY};
-			console.log("pointerDown", e);
-			//console.log("stage.x: " + stage.x+", "+"stage.y: " + stage.y);
-			//console.log("p.x: " + p.x+", "+"p.y: " + p.y);
-			//console.log("offset.x: "+offset.x +", offset.y:"+ offset.y);
-			//console.log("stage.mouseX: "+stage.mouseX+", stage.mouseY:"+stage.mouseY);
-			canvas.addEventListener("pointerup",pointerup_handler);
-			canvas.addEventListener("pointercancel",pointerup_handler);
-			canvas.addEventListener("pointerleave",pointerup_handler);
-			canvas.addEventListener("pointerout",pointerup_handler);
-			//if (e.pointerType=="touch"){
-			canvas.addEventListener("pressmove", pointermove_handler);
-			//}else{
-			canvas.addEventListener("pointermove", pointermove_handler);
-			//}
-			//setInterval(pointermove_handler, 500);
-			if(shiparray.length>0){
+			var since = e.timeStamp - pointerDownLog;
+		
+
+			if(since<=300 && evCache.length==0 && shiparray.length>0 && doubleClicked == -999){//雙擊
+
+				var p = stage.globalToLocal(e.screenX, e.screenY);
 				var shortestDistance = 999999999;
 				var shortestI = 0;
 				for(var i = 0; i < shiparray.length ; i++){
@@ -824,125 +797,185 @@
 						shortestI = i;
 					}
 				}
+				doubleClicked = shiparray[shortestI].counter;
+
 				shiparray[shortestI].shipsvg.bubbleShowAWhile();
-				//console.log("shortestI is: "+shortestI);
-			}
-			function pointermove_handler(ev){//滑鼠移動的函數
-				if (ev.cancelable) {
-					try{
-						ev.preventDefault();
-					}catch (error){
-						 console.log("error in ev.preventDefault: "+error);
+				shiparray[shortestI].selector = new createjs.Bitmap(selector);
+				shiparray[shortestI].selector.regX = shiparray[shortestI].shipbitmap.image.width/2;
+				shiparray[shortestI].selector.regY = 300;
+				shiparray[shortestI].shipsvg.addChild(shiparray[shortestI].selector);
+				/*canvas.addEventListener("pointerdown", stopDoubleClick);
+				function stopDoubleClick(){
+					if(doubleClicked >=0){
+						canvas.removeEventListener("pointerdown", stopDoubleClick);
+						shiparray[doubleClicked].selector.alpha = 0;
+						doubleClicked = -999;						
+						//console.log("remove stopDoubleClick EventListener");
 					}
+				}*/
+			}else{//單擊
+				pointerDownLog = e.timeStamp;
+				if(doubleClicked>=0){
+					for(var tmpI=0; tmpI<shiparray.length;tmpI++){
+						if(shiparray[tmpI].counter == doubleClicked){
+						shiparray[tmpI].selector.alpha = 0;
+						break;
+						}
+					}
+					doubleClicked=-999;
 				}
+				evCache.push(e);
+				//以下是新版本的移動控制
+				var mousePoint = {x: e.screenX, y:e.screenY};
+				var p = stage.globalToLocal(e.screenX, e.screenY);
+				/*//舊版移動控制
 				
-				 console.log("pointerMove", ev);
-				 
-				 // Find this event in the cache and update its record with this event
-				 for (var i = 0; i < evCache.length; i++) {
-				   if (ev.pointerId == evCache[i].pointerId) {
-					  evCache[i] = ev;
-					  console.log("evCache["+i+"]: "+ ev);
-				   break;
-				   }
-				 }
-
-				 // If two pointers are down, check for pinch gestures
-				 if (evCache.length >= 2) {
-				   // Calculate the distance between the two pointers
-				   var curDiff = Math.sqrt(Math.pow(evCache[0].screenX - evCache[1].screenX, 2)+Math.pow(evCache[0].screenY - evCache[1].screenY, 2));
-					var zoom =curDiff/prevDiff;
-					console.log("touchMoveTimes: "+ touchMoveTimes+ "; zoom: " + zoom +"; curDiff: "+curDiff+"; prevDiff: "+prevDiff);
+				var smootharray = [];
+				smootharray.push(p);
+				smootharray.push(p);
+				smootharray.push(p);
+				smootharray.push(p);
+				smootharray.push(p);
+				var offset={x:stage.x-p.x,y:stage.y-p.y};	*/
+				//var beforeScreen = {x: e.screenX, y:e.screenY};
+				//console.log("pointerDown", e);
+				//console.log("stage.x: " + stage.x+", "+"stage.y: " + stage.y);
+				//console.log("p.x: " + p.x+", "+"p.y: " + p.y);
+				//console.log("offset.x: "+offset.x +", offset.y:"+ offset.y);
+				//console.log("stage.mouseX: "+stage.mouseX+", stage.mouseY:"+stage.mouseY);
+				canvas.addEventListener("pointerup",pointerup_handler);
+				canvas.addEventListener("pointercancel",pointerup_handler);
+				canvas.addEventListener("pointerleave",pointerup_handler);
+				canvas.addEventListener("pointerout",pointerup_handler);
+				//if (e.pointerType=="touch"){
+				canvas.addEventListener("pressmove", pointermove_handler);
+				//}else{
+				canvas.addEventListener("pointermove", pointermove_handler);
+				//}
+				//setInterval(pointermove_handler, 500);
+				if(shiparray.length>0){
+					var shortestDistance = 999999999;
+					var shortestI = 0;
+					for(var i = 0; i < shiparray.length ; i++){
+						
+						var tmpDistance = Math.hypot(p.x - shiparray[i].shipsvg.x, p.y - shiparray[i].shipsvg.y)
+						if(tmpDistance < shortestDistance){
+							shortestDistance = tmpDistance;
+							shortestI = i;
+						}
+					}
+					shiparray[shortestI].shipsvg.bubbleShowAWhile();
+				}
+				function pointermove_handler(ev){//滑鼠移動的函數
+					if (ev.cancelable) {
+						try{
+							ev.preventDefault();
+						}catch (error){
+							 //console.log("error in ev.preventDefault: "+error);
+						}
+					}
 					
-				   if (prevDiff > 0) {
-					doZoom(zoom);
-					 if (curDiff > prevDiff) {
-					   // The distance between the two pointers has increased
-					   console.log("Pinch moving OUT -> Zoom in", ev);
-					   //ev.preventDefault();
-						
+					 //console.log("pointerMove", ev);
+					 
+					 // 在evCache中找回同一動作,並作更新
+					 for (var i = 0; i < evCache.length; i++) {
+					   if (ev.pointerId == evCache[i].pointerId) {
+						  evCache[i] = ev;
+						  //console.log("evCache["+i+"]: "+ ev);
+					   break;
+					   }
 					 }
-					 if (curDiff < prevDiff) {
-						//ev.preventDefault();
-					   // The distance between the two pointers has decreased
-					   console.log("Pinch moving IN -> Zoom out",ev);
 
-					 }
-				   }
-
-				   // Cache the distance for the next move event
-				   prevDiff = curDiff;
-				 }else {
+					 // 以下分辦移動和縮放控制
+					 if (evCache.length >= 2) {//兩隻手指以上，代表縮放
+					   
+					   var curDiff = Math.sqrt(Math.pow(evCache[0].screenX - evCache[1].screenX, 2)+Math.pow(evCache[0].screenY - evCache[1].screenY, 2));//計算兩指的距離
+						var zoom =curDiff/prevDiff;
 						
-						//stage._updatePointerPosition(stage.id, e, stage.pageX, stage.pageY);
-						var tmpP = stage.globalToLocal(ev.screenX, ev.screenY);
-						smootharray.push(tmpP);
-						smootharray.shift();
-						var xPosCount = 0;//以下是盡可能減少globalToLocal()出錯而加的,因為globalToLocal()在canvas未更新前會出錯，跳回舊的位置
-						var yPosCount = 0;
-						for(var i = 1; i<smootharray.length ;i++){
-							if(smootharray[i].x > smootharray[i-1].x ){
-								xPosCount++;
-							}else if(smootharray[i].x < smootharray[i-1].x){
-								xPosCount--;
+						
+					   if (prevDiff > 0) {
+						doZoom(zoom);
+						 
+					   }
+					   prevDiff = curDiff;
+					 }else {//單隻手指，代表移動
+
+							let newMousePoint = {x:ev.screenX, y:ev.screenY};
+							let tmpX = stage.x + (newMousePoint.x - mousePoint.x);
+							let xbound = stage.scaleX * bitmap.scaleX * image.width;
+							if(tmpX + xbound>=100 && canvas.width - tmpX >= 100){
+								stage.x = tmpX;
+								mousePoint.x  = newMousePoint.x;
 							}
-							if(smootharray[i].y > smootharray[i-1].y ){
-								yPosCount++;
-							}else if(smootharray[i].y < smootharray[i-1].y){
-								yPosCount--;
-							}					
-						}
-						if(xPosCount>0 && smootharray[smootharray.length-1].x-smootharray[smootharray.length-2].x>0){
-							var tmpX = tmpP.x+offset.x; //stage.mouseX+ stage.x - stage.mouseX
-							stage.x = tmpX;
-						}else if(xPosCount<0 && smootharray[smootharray.length-1].x-smootharray[smootharray.length-2].x<0){
-							var tmpX = tmpP.x+offset.x; //stage.mouseX+ stage.x - stage.mouseX
-							stage.x = tmpX;
-						}
-						if((yPosCount>0 && smootharray[smootharray.length-1].y-smootharray[smootharray.length-2].y>0)||(yPosCount<0 && smootharray[smootharray.length-1].y-smootharray[smootharray.length-2].y<0)){
-							var tmpY = tmpP.y+offset.y;						
-							stage.y = tmpY;
-						}
-						//console.log("pointerMove", ev);
-						//console.log("ev.screenX: " + ev.screenX+", "+"ev.screenY: " + ev.screenY+", tmpP.x: " + tmpP.x+", "+"tmpP.y: " + tmpP.y);
-						//console.log("tmpP.x: " + tmpP.x+", "+"tmpP.y: " + tmpP.y);
-						//console.log("stage.mouseX: "+stage.mouseX+", stage.mouseY:"+stage.mouseY);
-						
+							
+							var tmpY = stage.y + (newMousePoint.y - mousePoint.y);	
+							let ybound = stage.scaleY * bitmap.scaleY * image.height;								
+							if(tmpY + ybound>=100 && canvas.height - tmpY  >= 100){
+								stage.y = tmpY;
+								mousePoint.y  = newMousePoint.y;
+							}
+							
+							//console.log("tmpP:"+tmpP.x+", "+tmpP.y);
+							/*
+							smootharray.push(tmpP);
+							smootharray.shift();
+							var xPosCount = 0;//以下是盡可能減少globalToLocal()出錯而加的,因為globalToLocal()在canvas未更新前會出錯，跳回舊的位置
+							var yPosCount = 0;
+							for(var i = 1; i<smootharray.length ;i++){
+								if(smootharray[i].x > smootharray[i-1].x ){
+									xPosCount++;
+								}else if(smootharray[i].x < smootharray[i-1].x){
+									xPosCount--;
+								}
+								if(smootharray[i].y > smootharray[i-1].y ){
+									yPosCount++;
+								}else if(smootharray[i].y < smootharray[i-1].y){
+									yPosCount--;
+								}					
+							}
+							if((xPosCount>0 && smootharray[smootharray.length-1].x-smootharray[smootharray.length-2].x>0) || (xPosCount<0 && smootharray[smootharray.length-1].x-smootharray[smootharray.length-2].x<0)){
+								let tmpX = tmpP.x+offset.x; //stage.mouseX+ stage.x - stage.mouseX
+								let xbound = stage.scaleX * bitmap.scaleX * image.width;
+								if(tmpX + xbound>=100 && canvas.width - tmpX >= 100){
+									stage.x = tmpX;
+								}
+								
+							}
+							if((yPosCount>0 && smootharray[smootharray.length-1].y-smootharray[smootharray.length-2].y>0)||(yPosCount<0 && smootharray[smootharray.length-1].y-smootharray[smootharray.length-2].y<0)){
+								var tmpY = tmpP.y+offset.y;	
+								let ybound = stage.scaleY * bitmap.scaleY * image.height;								
+								if(tmpY + ybound>=100 && canvas.height - tmpY  >= 100){
+									stage.y = tmpY;
+								}
+							}*/							
+							stage.update();							
+					 }
+				 }
+				function pointerup_handler(ev) {
 
-						//console.log("stage.x: " + stage.x+", "+"stage.y: " + stage.y);
-
-						
-						stage.update();	
+				  // 從evCache中移除pointerup的手指
 					
-				 }
-			 }
-			function pointerup_handler(ev) {
-			  //console.log(ev.type, ev);
-			  console.log("pointerUp", ev);
-
-			   //clearInterval(pointermove_handler);
-			  // Remove this pointer from the cache and reset the target's
-				
-				for (var i = 0; i < evCache.length; i++) {
-				   if (evCache[i].pointerId == ev.pointerId) {
-					 evCache.splice(i, 1);
-					 break;
-				   }
-				 }
+					for (var i = 0; i < evCache.length; i++) {
+					   if (evCache[i].pointerId == ev.pointerId) {
+						 evCache.splice(i, 1);
+						 break;
+					   }
+					 }
 
 
-			  // If the number of pointers down is less than two then reset diff tracker
-			  if (evCache.length < 2) {
-				prevDiff = -1;
-				if(evCache.length < 1){
-					canvas.removeEventListener("pointermove", pointermove_handler);
-					canvas.removeEventListener("pressmove", pointermove_handler);
-					canvas.removeEventListener("pointerup",pointerup_handler);
-					canvas.removeEventListener("pointercancel",pointerup_handler);
-					canvas.removeEventListener("pointerleave",pointerup_handler);
-					canvas.removeEventListener("pointerout",pointerup_handler);
+				  // 如果pointer少於2,則重新設定prevDiff 
+				  if (evCache.length < 2) {
+					prevDiff = -1;
+					if(evCache.length < 1){
+						canvas.removeEventListener("pointermove", pointermove_handler);
+						canvas.removeEventListener("pressmove", pointermove_handler);
+						canvas.removeEventListener("pointerup",pointerup_handler);
+						canvas.removeEventListener("pointercancel",pointerup_handler);
+						canvas.removeEventListener("pointerleave",pointerup_handler);
+						canvas.removeEventListener("pointerout",pointerup_handler);
+					}
+				  }
 				}
-			  }
 			}
 			
 		});
@@ -964,25 +997,66 @@
 		
 		
 		function tick(event) {
+			//以下用於排列Z-index
 			stage.sortChildren(sortByZ);
 			function sortByZ(a,b) {
 				return a.y - b.y;
 			}
+			//以下用於鎖定船隻時畫面的逆向補償
+			if(doubleClicked>=0){
+				for(let i=0; i<shiparray.length;i++){
+					if(shiparray[i].counter ==doubleClicked){
+						stage.x = (innerWidth/2-shiparray[i].shipsvg.x*stage.scaleX);
+						stage.y = (innerHeight/2-shiparray[i].shipsvg.y*stage.scaleY);		
+
+						break;
+					}
+				}
+			}
+			//以下用於更新畫面
 			stage.update(event);		  
 		}
+		function handleChartResize(){		
+			var pixelChartInnerWidth = 0.8*window.innerWidth;
+			var pixelOfTenPercentInnerHeight = 0.1*window.innerHeight;
+			chartAspectRatio = pixelChartInnerWidth/pixelOfTenPercentInnerHeight;
+			chartCanvas.options.aspectRatio = chartAspectRatio;
+			var div = document.createElement("div");
+			var fontSize = 100;
+			var fontArray = [];
+				div.innerHTML = "1870";
+				div.style.position = "absolute";
+				div.style.top  = "-9999px";
+				div.style.left = "-9999px";
+				div.style.fontFamily = "'Brush Script MT' , 'Garamond' , 'Georgia' , 'Times New Roman'";
+			do{
+				fontSize--;
+				
+				div.style.fontSize = fontSize + "px"; 
+				document.body.appendChild(div);
+				fontArray = [ div.offsetWidth, div.offsetHeight ];
+				//console.log("fontSize: "+fontSize+" & fontArray[0]: "+fontArray[0]+"& fontArray[1]:"+ fontArray[1]+"& pixelOfTenPercentInnerHeight:"+pixelOfTenPercentInnerHeight+" &pixelChartInnerWidth:"+pixelChartInnerWidth);
+				document.body.removeChild(div);
+			}while(fontArray[0]>pixelOfTenPercentInnerHeight ||fontArray[1]> (pixelChartInnerWidth/24));
+
+			return 	fontSize;		
+		}
 		function handleResize(event) {
-				//console.log("resized");
 				  var w = window.innerWidth,
 					  h = window.innerHeight;
 				  var pos = 0;
 				  stage.canvas.width = w;
 				  stage.canvas.height = h;
-				  
+				  if(innerWidth<window.innerHeight){			
+						SHIP_TO_CANVAS_RATIO = 0.25;
+					}else{
+						SHIP_TO_CANVAS_RATIO = 0.1;
+					}
 				  //var pos = tween ? tween.rawPosition : 0;//如果tween是true, pos 會等於tween.rawPosition，否則會等於０。　？是條件 (三元) 運算子
 				  //var pos2 = tween2 ? tween2.rawPosition : 0;
 				  //createjs.Tween.removeTweens(shipsvg);
 				  //createjs.Tween.removeTweens(shipsvg2);
-				  // Make a new path using the width/height ratios
+				  // 以下刪除大量舊版本的路線
 				  /*pathe.length = 0;
 				  pathw1.length = 0;
 				  pathw2.length = 0;
@@ -1010,23 +1084,15 @@
 						//console.log("tmppathpoints: "+tmppathpoints);
 						var tmpathnewpoints = [];
 						for(var i=0; i<item.length;i+=2){
-							//console.log("item[i]: "+item[i+1]);
 							tmpathnewpoints.push(
 								item[i]* image.width * bitmap.scaleX + 3*i*Math.random(), 
 								item[i+1]* image.height * bitmap.scaleY+ 3*i*Math.random(),	
 							);
-							//console.log("tmppathnewpoints: "+tmpathnewpoints.toString());
 						}
 						
 						tmppath.push(tmpathnewpoints);
-						//console.log("tmppath: "+tmppath.length);
 					});
-				
-				//console.log("PATHE_RATIOS: "+PATHE_RATIOS.toString());
-				//console.log("image.width: "+image.width);
-				//console.log("bitmap.scaleX: "+bitmap.scaleX);
-				//console.log("bitmap.scaleY: "+bitmap.scaleY);
-				//console.log("pathe: "+ pathe.toString());
+
 				var earliestMonth = 12;
 				for (var i=0; i<shiparray.length; i++){
 					
@@ -1040,14 +1106,11 @@
 						}
 					}
 				}
-				//console.log("earliestMonth: "+earliestMonth);
-				for (var i=0; i<shiparray.length; i++){
-					
+				for (var i=0; i<shiparray.length; i++){	
 					
 					
 					var pos = shiparray[i].tween ? shiparray[i].tween.rawPosition : 0;
-					//var tmptmp = shiparray[i].month-earliestMonth;
-					//console.log("shiparray[i].month: "+tmptmp);
+
 					var month = shiparray[i].month ? (shiparray[i].month-earliestMonth)*monthTime : i*monthTime;
 					month += shiparray[i].day ? shiparray[i].day*monthTime/30 : i*monthTime/600;
 					
@@ -1210,6 +1273,10 @@
 							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[1]}},monthTime*5).call(bubbleNow, [shiparray[i]], this).to({guide: {path: tmppath[2]}},monthTime*5).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
 							shiparray[i].tween.setPosition(pos);
 							break;
+						case "曼谷":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[37]}},monthTime*2/3).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
 						default://其他航線**************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************
 							//記得不可亂插入
 							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path:tmppath[15]}},monthTime).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
@@ -1221,28 +1288,28 @@
 					 
 					
 				}
-
-			 
+			Chart.defaults.font.size = handleChartResize();
+			chartCanvas.update('active');
+			
+					
 		 }
 
 		 function arrival(counterNum, obj){//移除船隻
-			//console.log("arrival: "+counterNum);
 			for(let i=0; i<shiparray.length;i++){
 				if(counterNum == shiparray[i].counter){
-				
+					if(shiparray[i].counter == doubleClicked){
+						doubleClicked = -999;
+					}
 					stage.removeChild(shiparray[i].shipsvg);
 					shiparray[i].bubble.remove();	
 					
 					shiparray.splice(i, 1);
-					//console.log("shiparray.length: "+shiparray.length);
 					break;
 				}
 			}
 		 }
 		 function showArrival(array, obj){//顯示船隻的結果
-			//console.log("array.bubble.innerHTML: "+ array.bubble.innerHTML);
 			var htmlp = array.bubble.getElementsByClassName("triangle-isosceles");	
-			//console.log("htmlp: "+htmlp[0]);
 			if(array.event){
 				htmlp[0].innerHTML ="豬仔船"+array.shipname+"號"+array.event;
 			}else{
@@ -1255,7 +1322,6 @@
 			}
 
 			if(oddEven){//以下控制出現上箭頭還是下箭頭				
-				console.log(" htmlspan[0].style.bottom: "+ array.bubble.innerHTML);
 				oddEven = false;
 				var htmlspan = document.createElement('span');
 				htmlspan.className = "triangle-isosceles-span";
@@ -1276,14 +1342,12 @@
 				//htmlspan[0].style.bottom = 0;
 				 
 			}
-			//var bubble = new createjs.DOMElement(cursor.value.bubble);
-			
+
 			
 			for(var tmpNum = 0; tmpNum < labels.length; tmpNum++){
 				if(labels[tmpNum] == array.year && array.cules && array.shipsvg.canAddCules){
 					chartCanvas.data.datasets[0].data[tmpNum] -= Math.floor(array.cules);
 					chartCanvas.options.plugins.datalabels.display = true;
-					//console.log("chartCanvas.data.datasets[0].data["+tmpNum+"]: "+chartCanvas.data.datasets[0].data[tmpNum]);
 					break;
 				}
 			}
@@ -1296,15 +1360,12 @@
 			array.shipsvg.bubbleShowAWhile();
 		 }
 		 function showfist(array, obj){
-			//for(let i=0; i<shiparray.length;i++){
-				//if(counterNum == shiparray[i].counter){
+
 					array.casebitmap = new createjs.Bitmap(fist);									
 					array.casebitmap.regX = array.shipbitmap.image.width/2;
 					array.casebitmap.regY = 300;
 					array.shipsvg.addChild(array.casebitmap);
 					createjs.Tween.get(array.casebitmap).to({alpha:0}, 3000);
-				//}
-			//}
 		 }
 		 function showknife(array, obj){
 			array.casebitmap = new createjs.Bitmap(knife);
@@ -1346,14 +1407,12 @@
 
 				openCursorRequestMax.onsuccess = function (event) {
 					if (event.target.result) {
-						maxDB_INDEX = event.target.result.value; //the object with max revision
-						console.log("maxDB_INDEX:　"+　maxDB_INDEX.year);
+						maxDB_INDEX = event.target.result.value; 
 						range.max = maxDB_INDEX.year;
 						var openCursorRequestMin = tmpIndex.openCursor(null, 'nextunique');
 						openCursorRequestMin.onsuccess = function (event) {
 							if (event.target.result) {
-								minDB_INDEX = event.target.result.value; //the object with max revision
-								console.log("minDB_INDEX:　"+　minDB_INDEX.year);
+								minDB_INDEX = event.target.result.value;
 								range.min = minDB_INDEX.year;
 								var tmpData = [];
 								for(var yr = range.min; yr <= range.max; yr++){
@@ -1372,17 +1431,11 @@
 									chartCanvasID,
 									config
 								  );
-								//console.log("labels: "+labels.toString());
 							}
 						};
 					}
-				};
-				
-				/*tmpTransaction.oncomplete = function (event) {
-					tmpDb.close();
-					if(callback) //you'll need a calback function to return to your code
-						callback(maxDB_INDEX);
-				};*/
+				};				
+
 			}
 		}
 		function setValue(){
@@ -1399,19 +1452,14 @@
 					var tmpObjectStore = tmpTransaction.objectStore(DB_STORE_NAME);
 					var tmpIndex = tmpObjectStore.index(DB_INDEX);
 					const keyRng = IDBKeyRange.only(range.value);
-					//var getRequest = tmpIndex.get(range.value);
 					const getRequest = tmpIndex.openCursor(keyRng);
-					//var tmpCounter = 0;
 					var cursorCounter = 0;
 					getRequest.onsuccess = function() {
 						var cursor = event.target.result;
-						
-						//console.log(getRequest.result);
+
 						if(cursor) {
 							cursorCounter++;
-							//console.log("cursor: "+ cursor);
-							//tmpCounter ++;
-							//console.log("cursor.value.year: "+ cursor.value.year);
+
 							cursor.value.shipsvg = new createjs.Container();
 							cursor.value.bubble = document.createElement('div');
 							cursor.value.bubble.className = "bubble-container";
@@ -1466,35 +1514,28 @@
 									cursor.value.shipbitmap = new createjs.Bitmap(escuna);
 									htmlp.innerHTML += "船型: 雙桅縱帆船<br>";
 									break;
-								
+								case "Taumão":
+									cursor.value.shipbitmap = new createjs.Bitmap(taumao);
+									htmlp.innerHTML += "船型: 頭孟帆船<br>";
+									break;
 								default:
 									cursor.value.shipbitmap = new createjs.Bitmap(ship);
 									break;
 							}
-							
-							//var hit = new createjs.Shape();
-							//hit.graphics.beginFill("#000").drawRect(0, 0, cursor.value.shipbitmap.image.width, cursor.value.shipbitmap.image.height);
-							//cursor.value.shipsvg.hitArea = hit;
-							//cursor.value.shipbitmap.addChild(hit);
+							let randomCurve = 5*Math.random();
+							let randomSwing = 500*Math.random()+500;
+							cursor.value.shipsvg.selfTween = createjs.Tween.get(cursor.value.shipbitmap, {loop: true}).to({ rotation: -1*randomCurve },randomSwing ).to({ rotation: 0 },randomSwing ).to({ rotation: randomCurve },randomSwing ).to({ rotation: 0 },randomSwing );
+
 							cursor.value.counter = counter;
 							counter++;
 							
 							cursor.value.shipsvg.addChild(cursor.value.shipbitmap);
 							
 							cursor.value.shipsvg.addChild(DOMBubble);
-							//cursor.value.shipsvg.addChild(hit);
-							//console.log("cursor.value.shipsvg.getChildAt(0)"+ cursor.value.shipsvg.getChildAt(0));
-							//console.log("cursor.value.shipsvg.getChildAt(1)"+ cursor.value.shipsvg.getChildAt(1).className);
+
 							stage.addChild(cursor.value.shipsvg);
-							//console.log("cursor.shipsvg: "+ cursor.shipsvg);
-							//stage.addChild(cursor.value.shipsvg);
-							
-							//console.log("cursor.value.bubble.clientWidth: "+ cursor.value.bubble.clientWidth);
-							console.log("cursor.value.bubble.clientHeight: "+ cursor.value.bubble.clientHeight);
 							cursor.value.shipbitmap.regX = cursor.value.shipbitmap.image.width/2;
 							cursor.value.shipbitmap.regY = cursor.value.shipbitmap.image.height/1.13;
-							//hit.regX = cursor.value.shipbitmap.image.width/2;
-							//hit.regY = 300;
 							DOMBubble.regX = cursor.value.bubble.clientWidth/2;
 							DOMBubble.regY = cursor.value.bubble.clientHeight+cursor.value.shipbitmap.image.height/6.8;
 							DOMBubble.alpha = 0;
@@ -1510,11 +1551,6 @@
 									cursor.value.casebitmap.regX = cursor.value.shipbitmap.image.width/2;
 									cursor.value.casebitmap.regY = 300;
 									cursor.value.shipsvg.addChild(cursor.value.casebitmap);
-									//cursor.value.plaque = new createjs.Bitmap(plaque);
-									//cursor.value.plaque.regX = cursor.value.plaque.image.width/2;
-									//cursor.value.plaque.regY = (cursor.value.plaque.image.height-cursor.value.shipbitmap.image.height)/2+300;
-									
-									//cursor.value.shipsvg.addChild(cursor.value.plaque);
 									
 									break;
 								case "2"://case 2: 航行230天才到古巴，276人死亡。
@@ -1643,19 +1679,12 @@
 							getFixScale(cursor.value.shipsvg, SHIP_TO_CANVAS_RATIO);
 							shiparray.push(cursor.value);
 							
-							/*cursor.value.shipsvg.addEventListener("click", ()=>{
-								
-								DOMBubble.alpha = 1;
-								createjs.Tween.get(DOMBubble).wait(2000).to({ alpha: 0 }, 1000 );
-							});*/
-							
-							cursor.value.shipsvg.bubbleShowAWhile = function (){
-								
-								//DOMBubble.regY = cursor.value.bubble.clientHeight+50;
-								
+						
+							cursor.value.shipsvg.bubbleShowAWhile = function (){							
+																
 								//console.log("bubble.regY: "+DOMBubble.regY+ ", cursor.value.bubble.clientHeight;"+cursor.value.bubble.clientHeight);
 								DOMBubble.alpha = 1;
-								createjs.Tween.get(DOMBubble).wait(2000).to({ alpha: 0 }, 1000 );
+								createjs.Tween.get(DOMBubble).wait(BUBBLESHOWAWHILEWAIT).to({ alpha: 0 }, BUBBLESHOWAWHILEVANISH );
 							}
 							cursor.continue();
 						}else{
@@ -1663,9 +1692,6 @@
 								changeValueDisplayText = true;
 								changeValue();
 							}
-							console.log('Entries all displayed. Total: '+cursorCounter );
-							//tmpCounter = 0;
-							//console.log("shiparray.toString(): "+ shiparray.toString());
 							handleResize();
 							
 								range.addEventListener('mouseup', setValue);
@@ -1678,8 +1704,8 @@
 					/*tmpIndex.openCursor().onsuccess = function(event) {
 						var cursor = event.target.result;
 						if(cursor) {
-							console.log("cursor: "+ cursor);
-							console.log("cursor.year: "+ cursor.year);
+							//console.log("cursor: "+ cursor);
+							//console.log("cursor.year: "+ cursor.year);
 							cursor.shipsvg = new createjs.Bitmap(ship);
 							//console.log("cursor.shipsvg: "+ cursor.shipsvg);
 							stage.addChild(cursor.shipsvg);
@@ -1692,7 +1718,7 @@
 							
 							cursor.continue();
 						} else {
-							console.log('Entries all displayed.');
+							//console.log('Entries all displayed.');
 							//console.log("shiparray.toString(): "+ shiparray.toString());
 							handleResize();
 						}
@@ -1704,9 +1730,7 @@
 		function changeValue(){
 			clearTimeout(timeoutID);
 			if(changeValueDisplayText){
-				//console.log("yearTextField.style.fontSize: "+yearTextField.style.fontSize);
 
-				//yearTextField.style.fontSize = "20vw";
 				if(innerWidth>window.innerHeight){
 					yearTextField.innerHTML += "<div style='font-size: 7vw; position: absolute; top:55vh;left:0vw; width:100vw; text-align: center';>沒資料</div>";
 				}else{
@@ -1724,7 +1748,7 @@
 			(function next() {
 				yearTextField.style.opacity = oppArray[tmpX];
 				if(++tmpX < oppArray.length) {
-					timeoutID = setTimeout(next, 200); //數字消失的速度
+					timeoutID = setTimeout(next, 10); //數字消失的速度
 				}else{
 					
 					yearTextField.style.visibility = "hidden";
@@ -1733,31 +1757,37 @@
 			})();
 		};
 		function hidePlqaue(){
-			var oppArray = ["0.9", "0.8", "0.7", "0.6", "0.5", "0.4", "0.3", "0.2", "0.1", "0"];
-			var tmpX = 0;
-			(function next() {
-				document.getElementById('plaqueholder').style.opacity = oppArray[tmpX];
-				if(++tmpX < oppArray.length) {
-					var timeoutID2 = setTimeout(next, 100); //數字消失的速度
-				}else{					
-					document.getElementById('plaqueholder').style.display = 'none'; 
-					document.removeEventListener("pointerdown", hidePlqaue);					
-				}
-			})();
-
+			if(plaqueStep++ <5){
+				document.getElementById("plaqueStepSvg").src = "step"+plaqueStep+".svg";
+			}else{
+				var oppArray = ["0.9", "0.8", "0.7", "0.6", "0.5", "0.4", "0.3", "0.2", "0.1", "0"];
+				var tmpX = 0;
+				(function next() {
+					document.getElementById('plaqueholder').style.opacity = oppArray[tmpX];
+					if(++tmpX < oppArray.length) {
+						var timeoutID2 = setTimeout(next, 100); //數字消失的速度
+					}else{					
+						document.getElementById('plaqueholder').style.display = 'none'; 
+						document.removeEventListener("pointerdown", hidePlqaue);	
+						range.addEventListener('mouseup', setValue);
+						range.addEventListener('touchend', setValue);
+						range.addEventListener('input', changeValue);	
+						document.addEventListener("DOMContentLoaded", setValue);
+					}
+				})();
+			}
 		}
 
-		document.addEventListener("DOMContentLoaded", setValue);
+
 		document.addEventListener("pointerdown", hidePlqaue);
-		range.addEventListener('mouseup', setValue);
-		range.addEventListener('touchend', setValue);
-		range.addEventListener('input', changeValue);
+		
 		
 	}
       
 	
       
 </script>
+	
 	<canvas id="mapCanvas" style="background-color:white;" >不支援</canvas>
 	<div id="chartDIV">
 		<canvas id="chartCanvas"  ></canvas>
@@ -1770,14 +1800,16 @@
 		<div id="plaqueholder" >
 			
 			<div style="width: 350px; height:260px; position: absolute; top:50%;  left:50%; transform: translate(-50%, -50%);background-color:#FFFECD;"   >
-				<p style="padding: 25px;" >本賣豬仔船運圖根據憲報和相關研究結果，顯示從澳門出發的豬仔船航行情況。敬請拖拉下方的時間橫軸選擇年份，然後點擊船隻查看航行資料，也可使用滑鼠滾輪和觸屏手勢縮放地圖。下方棒形圖顯示被賣豬仔的數量。</p>
+				<img src="step0.svg" id="plaqueStepSvg"></img>
+				<p style="padding: 25px;" ><i>賣豬仔船運圖</i>刻劃澳門豬仔船的航行苦難，下方棒形圖統計被賣豬仔數量。<br>敬請拖拉下方的時間橫軸選擇年份。<br>點擊船隻可查看航行資料，雙擊船隻跟隨航行，支持滑鼠滾輪和觸屏手勢縮放地圖。<br>數據綜合憲報、施白蒂、文德泉、吳劍雄、張廷茂等人的研究成果。<br>按任意位置繼續。</p>
 			</div>
 			<img class= "plaque" src="plaque.png" width="579px"></img>
 		</div>
 		
 		
 		
-		<p>by inaciso 2022</p>
+	
 	</div>
+	
 </body>
 </html>

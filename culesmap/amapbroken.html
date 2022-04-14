@@ -1,0 +1,266 @@
+<!DOCTYPE HTML>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<style>
+		body {
+			margin: 0px;
+			padding: 0px;
+			width: 100vw;
+			height: 100vh;
+		}
+
+		.textBox {
+			display: inline-block;
+			width: 150px;
+
+			height: 50px;
+			margin: 0em;
+		}
+		
+		#modelFrame{
+			border: none; 
+			width: 30vw; 
+			height: 30vh;
+		}
+		#container {
+          width: 95vw;
+          height: 60vh;
+		  margin: 0px;
+        }
+		#search{
+		 width: 90vw;
+		}
+	</style>
+	</style>
+	<html class='v2' dir='ltr' xmlns='http://www.w3.org/1999/xhtml' xmlns:b='http://www.google.com/2005/gml/b'
+		xmlns:data='http://www.google.com/2005/gml/data' xmlns:expr='http://www.google.com/2005/gml/expr'>
+
+	<meta content='text/html; charset=UTF-8' http-equiv='Content-Type' />
+	<title>
+		澳門賣豬仔船運圖
+	</title>
+</head>
+<script>
+   
+      
+    window.onLoad  =   function(){
+		var db;
+		const DB_NAME = "culeships-indexeddb";
+		const DB_VERSION = 1;
+		const DB_STORE_NAME = "journeys";
+		const DB_INDEX = "year";
+		
+    	var map = new AMap.Map('container', {
+           mapStyle: 'amap://styles/6321e27db3e4d4a20102cd86ab63260d', //設置地圖的顯示樣式
+           resizeEnable: true,
+           center:[113.563822, 22.168311],
+           zoom:0,
+		   
+        });  
+      	infowindow = new AMap.InfoWindow({
+          content: 'this is inaciso',
+         	size: new AMap.Size(document.documentElement.clientWidth/3,document.documentElement.clientHeight/2.8),
+          //maxWidth: 250
+		});
+      	
+		if (!window.indexedDB) {
+			window.alert("抱歉，你的瀏覽器無法支援土地公收藏架。敬請使用其他瀏覽器。");
+			
+		}else{
+			//window.alert("瀏覽器通過測試。");
+			loadJson();
+			
+		}
+		async function loadJson() {
+		  const requestURL = 'jsonship.json';
+		  const request = new Request(requestURL);
+		  const response = await fetch(request);
+		  const jsonship = await response.json();
+		  //console.log(jsonship);
+		  openDb(jsonship);
+		}
+
+
+		function openDb(jsonship) {
+			var req = indexedDB.open(DB_NAME, DB_VERSION);
+			req.onsuccess = function (evt) {
+				db = this.result;
+				//var transaction = db.transaction(DB_STORE_NAME, 'readonly');
+				//var objectStore = transaction.objectStore(DB_STORE_NAME);
+				var transaction = db.transaction(DB_STORE_NAME, 'readwrite');
+				var objectStore = transaction.objectStore(DB_STORE_NAME);
+				for (i = 0; i < jsonship.jsonship.length; i++) { 
+					//console.log(jsonship.jsonship[i]);
+					objectStore.put(jsonship.jsonship[i]);
+				} 
+			};
+			req.onerror = function (evt) {
+			  console.error("openDb:", evt.target.errorCode);
+			};
+
+			req.onupgradeneeded = function (evt) {
+				var objectStore = evt.target.result.createObjectStore(DB_STORE_NAME, {autoIncrement: true});
+				objectStore.createIndex(DB_INDEX, DB_INDEX, { unique: false });
+				objectStore.createIndex("id", "id", { unique: true });
+			};
+		  }
+		 /*
+      	const path = [
+			new AMap.LngLat(115.192922,21.586757),
+			new AMap.LngLat(118.893117,23.655397),
+			new AMap.LngLat(123.727101,26.2449491),
+			new AMap.LngLat(127.77007,25.850132),
+			new AMap.LngLat(161.678273,35.96983),
+			new AMap.LngLat(161.678273,35.96983),
+			new AMap.LngLat(-77.18224,-12.090343),
+		];
+		const customData = [
+			{ position: path[0], duration: 200 },
+			{ position: path[1], duration: 400 },
+			{ position: path[2], duration: 600 },
+			{ position: path[3], duration: 800 },
+			{ position: path[4], duration: 1000 },
+			{ position: path[5], duration: 1000 },
+			{ position: path[6], duration: 1000 },
+		];
+		AMap.plugin('AMap.MoveAnimation', function(){
+			const animationMarker = new AMap.Marker({
+				position: new AMap.LngLat(113.570207,22.181865),
+				//angle: 90,
+			});
+			animationMarker.moveAlong(customData);
+			map.add(animationMarker);
+			animationMarker.startMove();
+		});*/
+		AMap.plugin('AMap.MoveAnimation', function(){
+			const path = [
+				new AMap.LngLat(115.192922,21.586757),
+				new AMap.LngLat(118.893117,23.655397),
+				new AMap.LngLat(123.727101,26.2449491),
+				new AMap.LngLat(127.77007,25.850132),
+				new AMap.LngLat(161.678273,35.96983),
+				new AMap.LngLat(179.999999,29.565935),
+				new AMap.LngLat(282.81776,29.565935),
+				
+				//new AMap.LngLat(-77.18224,-12.090343),
+			];
+			const path2 = [
+				new AMap.LngLat(161.678273,35.96983),
+				new AMap.LngLat(161.678273,35.96983),
+			];
+			const customData = [
+				{ position: path[0], duration: 1000 },
+				{ position: path[1], duration: 1000 },
+				{ position: path[2], duration: 1000 },
+				{ position: path[3], duration: 1000 },
+				{ position: path[4], duration: 1000 },
+				{ position: path[5], duration: 1000 },
+				{ position: path[6], duration: 1000 },
+				//{ position: path[8], duration: 2000 },
+			];
+			const customData2 = [
+				{ position: path2[0], duration: 1000 },
+				{ position: path2[1], duration: 1000 },
+			];
+			AMap.plugin('AMap.MoveAnimation', function(){
+				const animationMarker = new AMap.Marker({
+					position: new AMap.LngLat(116.397389,39.909466),
+					angle: 90,
+					extData: 0,
+				});
+				map.add(animationMarker);
+				animationMarker.moveAlong(customData);
+				animationMarker.on('moveend',function () {
+					console.log('movealong1');
+					map.setCenter(animationMarker.getPosition()); 
+					if(animationMarker.getExtData() == 0){
+						console.log('movealong2');
+						
+						animationMarker.setExtData(1);
+						const tmpPosition = new AMap.LngLat(-180,29.565935);
+						//animationMarker.setPosition([-77.18224,-12.090343]);
+						//animationMarker.moveAlong(customData2);
+					}
+				});
+			});
+			
+		})
+		
+		
+      	var coordsArray = new Array();
+      	
+      	for (var l = 0; l< 0; l++){
+          
+          var tmpCoords = earthgodArray[l].geometry.coordinates;
+          var tmpLatLng = new AMap.LngLat(tmpCoords[1], tmpCoords[0]);
+          coordsArray.push(tmpLatLng);
+        }
+      	AMap.convertFrom(coordsArray, 'gps', function(status, result) {
+          if(result.info === 'ok'){
+            for (var i = 0; i < result.locations.length; i++){
+              var tmpZindex = 200-Math.round(1000*(earthgodArray[i].geometry.coordinates[0]-22));
+              var latLng = result.locations[i];
+              var godname = earthgodArray[i].properties.name;
+              var urlSketchfab = earthgodArray[i].url;
+    		  var marker = new AMap.Marker({
+                position: latLng,
+                extData: urlSketchfab,
+                map: map,
+                title: godname,
+                zIndex: tmpZindex,
+                icon: 'https://2.bp.blogspot.com/-6rIYNa8YnZU/Wk-o78s5EcI/AAAAAAAASkc/pXyFkEd0fbwbN9uateCyxeuAsCFiNEb0gCPcBGAYYCw/s1600/god_marker.png',
+                topWhenClick: true,
+              });         
+			  	map.add(marker);
+           var text = new AMap.Text({
+                text: godname,
+                anchor:'top-left', 
+                position: latLng,
+                zIndex: tmpZindex -1,
+             		cursor: 'grab',
+            });
+           text.setMap(map);
+           text.hide();
+              AMap.event.addListener(marker, 'click', function () {
+                //var script = document.createElement('script');
+                //script.src = 'https://json2jsonp.com/?url=https://sketchfab.com/oembed?url=' + this.getExtData() + '%26maxwidth=210&callback=gotJSON';
+                //script.type = 'text/javascript';
+                //document.getElementsByTagName('head')[0].appendChild(script);
+                infowindow.setContent("<iframe id='modelFrame' src='"+this.getExtData() +"/embed?autostart=1&camera=0&ui_hint=0'></iframe><br/>"+this.getTitle());          
+                infowindow.open(map, this.getPosition());       
+              });
+            }
+          }
+        });
+    }
+       
+          
+      
+    var url = 'https://webapi.amap.com/maps?v=2.0&key=74f2eb5bc1bc4293b66743e2d4b7bb4b&callback=onLoad';
+    var jsapi = document.createElement('script');
+    jsapi.charset = 'utf-8';
+    jsapi.src = url;
+    document.head.appendChild(jsapi);
+      
+
+      
+</script>
+<body>
+	<div>
+	<img style="display: none;" border="0" src="http://www.kingchigames.com/Games/earthgodjpg.jpg"  />
+		<h1>澳門土地公位置圖(高德地圖版本)</h1>
+		<p>高德地圖版本的土地公位置圖受流量限制和內地加密定位的影響，每天的使用次數會有所限制，定位誤差稍大。	
+		</p>
+	</div>
+	<div>
+		
+		<div id="container" tabindex="0"  >
+		</div>
+		
+		
+		<p>by inaciso 2022</p>
+	</div>
+</body>
+</html>

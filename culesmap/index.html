@@ -1,0 +1,1784 @@
+<!DOCTYPE HTML>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+	<style>
+		body {
+
+			width: 100vw;
+			height: 100vh;
+		}
+
+		body,html,div{
+			margin:	0px;
+			padding: 0px;
+			border:0 none;
+			overflow:hidden;
+		}
+		#mapCanvas{
+			width: 100vw;
+			height: 100vh;
+		}
+		#chartDiv{
+			position:fixed;
+			width:80vw !important;
+			height: 10vh !important;
+			bottom:0vh;
+			left:10vw;
+			border-radius: 0; /* iOS */
+			z-index: 997;
+		}
+		#chartCanvas{
+			position:fixed;
+			width:80vw !important;
+			height: 10vh !important;
+			bottom:0vh;
+			left:10vw;
+			border-radius: 0; /* iOS */
+			z-index: 998;
+			
+		}
+		.plaque{
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			margin-left: -290px; /* Half the width */
+			margin-top: -250px;
+		}
+		#yearTextField{		
+			font-family:   Brush Script MT , Garamond , Georgia , Times New Roman;
+			position: absolute;
+			top: 10vh;
+			left:0;
+			width:100vw;
+			text-align: center;
+			color: gray;
+			opacity: 0.7;
+			font-size: 30vw;
+			z-index: 998;
+			user-select: none;
+			-moz-user-select: none;
+			-khtml-user-select: none;
+			-webkit-user-select: none;
+			-o-user-select: none;
+		}
+
+		input[type="range"] { 
+			position:fixed;
+			width:80vw;
+			bottom:10vh;
+			left:10vw;	
+			z-index: 999;
+			margin: auto;
+			-webkit-appearance: none;			
+			overflow: hidden;
+			height: 2vh;			
+			cursor: pointer;
+			border-radius: 0; /* iOS */
+		}
+
+		::-webkit-slider-runnable-track {
+			background: #DDDCB2;
+		}
+
+		/*
+		 * 1. Set to 0 width and remove border for a slider without a thumb
+		 */
+		::-webkit-slider-thumb {
+			-webkit-appearance: none;
+			width: 1vw; /* 1 */
+			height: 2vh;
+			background: #FFFECD;
+			box-shadow: -100vw 0 0 100vw #99A37A;
+			border: 1vh solid #999; /* 1 */
+		}
+
+		::-moz-range-track {
+			height: 2vh;
+			background: #DDDCB2;
+		}
+
+		::-moz-range-thumb {
+			-webkit-appearance: none;
+			width: 1vw; /* 1 */
+			height: 2vh;
+			background: #FFFECD;
+			box-shadow: -100vw 0 0 100vw #99A37A;
+			border: 1vh solid #999; /* 1 */
+		}
+		.bubble-container{
+			width: max(60vw, 80vh);
+			margin: 0 auto;
+			position: absolute;
+			top:0;
+			left:0;
+			font-size: 5em;
+		}
+
+		.triangle-isosceles{
+			position: relative;
+			padding: 20px;
+			margin: 1em 0 3em;
+			color: #000;
+			background: #DDDCB2;
+			border-radius: 5px;  
+		}
+
+		.triangle-isosceles-span{
+			content: "";
+			position: absolute;
+			bottom: min(-4vw, -4vh);/* 如果改為top,變成向上 */
+			left: max(26vw, 34vh);
+			display:block;
+			width:0;
+			height: 0;		  
+			border-top: max(4vw, 4vh) solid #DDDCB2;/* 如果改為bottom,變成向上 */		  
+			border-left: max(4vw, 4vh) solid transparent;
+			border-right: max(4vw, 4vh) solid transparent;		  
+		}
+		.triangle-isosceles-span-up{
+			content: "";
+			position: absolute;
+			top: min(-4vw, -4vh);/* 如果改為top,變成向上 */
+			left:max(26vw, 34vh);
+			display:block;
+			width:0;
+			height: 0;		  
+			border-bottom: max(4vw, 4vh) solid #DDDCB2;/* 如果改為bottom,變成向上 */		  
+			border-left: max(4vw, 4vh) solid transparent;
+			border-right: max(4vw, 4vh) solid transparent;		  
+		}
+		
+	</style>
+	</style>
+	<html class='v2' dir='ltr' xmlns='http://www.w3.org/1999/xhtml' xmlns:b='http://www.google.com/2005/gml/b'
+		xmlns:data='http://www.google.com/2005/gml/data' xmlns:expr='http://www.google.com/2005/gml/expr'>
+
+	<meta content='text/html; charset=UTF-8' http-equiv='Content-Type' />
+	<title>
+		澳門賣豬仔船運圖
+	</title>
+	<script src="createjs.min.js"></script>
+	<script src="tweenjs.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+	<script>
+		createjs.MotionGuidePlugin.install();
+	</script>
+</head>
+
+<body onload="init();">
+	<script>
+	
+      
+    function init(){
+		var db;
+		var shiparray = [];
+		var counter = 0;
+		var SHIP_TO_CANVAS_RATIO = 0.1;
+		//var tween;
+		//var tween2;
+		const DB_NAME = "culeship-indexeddb";
+		const DB_VERSION =1;
+		const DB_STORE_NAME = "journeys";
+		const DB_INDEX = "year";
+		
+    	const MACAU = {x: 1102, y: 2357};
+		const TAIWAN_STRAIT = {x: 1242,y:2289};
+		const JAPANSEA = {x: 1392,y:2280};
+		const HAWAI = {x: 2937,y: 2459};
+      	const COLLAO = {x: 4546, y: 3061 };
+		const SANFRANCISCO = {x: 3617, y:1999};
+		const KWIN_NYON = {x: 1021, y: 2544};
+		const SOUTH_CHINA_SEA = {x: 1049, y: 2703};
+		const SINGAPORE ={x: 909, y: 2803};
+		const MALACCA_STRAIT={x: 834, y: 2770};
+		const PENANG ={x: 776, y: 2680};
+		const COLOMBA ={x: 445, y: 2740};
+		const INDIAN_OCEAN1 ={x: 186, y: 2937};
+		const INDIAN_OCEAN2 ={x: 0, y: 3328};
+		const INDIAN_OCEAN3 ={x: 7365, y: 3328};
+		const NATAL = {x: 6774, y: 3464};
+		const GEORGE = {x: 6631, y: 3569};
+		const CAPE_OF_GOOD_HOPE = {x: 6498, y: 3531};
+		const ATLANTIC_OCEAN1 = {x: 5832, y: 3414};
+		const BAIA = {x: 5376, y: 3072};
+		const ST_PAUL = {x: 5548, y: 2796};
+		const ATLANTIC_OCEAN2 = {x: 5121, y: 2611};
+		const CARIBBEAN_SEA1 = {x: 4547, y: 2517};
+		const CARIBBEAN_SEA2 = {x: 4374, y: 2374};
+		const HAVANA= {x: 4456, y: 2321};
+		const ADELAIDE = {x: 1592, y:3631};
+		const range = document.getElementById("range");
+		var changeValueDisplayText = false;
+		const yearTextField = document.getElementById("yearTextField");
+		var timeoutID;
+		const monthTime = 2500;//這個變數主要控制航行的時間
+		const ARRIVALTIME = 3000;//這個變數用於控制船隻到達後,停留多久才會消息。
+		//var zoom;
+		var oddEven = true;//這個變數用來控制triangle-isosceles是否向上
+		var PATHALL=[];
+		
+		
+		var bitmap;
+		var canvas= document.getElementById("mapCanvas");
+		canvas.width = window.innerWidth;
+		canvas.height = window.innerHeight;   
+		var stage = new createjs.Stage("mapCanvas");
+		var image = new Image();
+		image.src = "oldmap.jpg";
+		image.onload = handleImageLoad;
+		var ship = new Image();
+		var barca = new Image();
+		var galera = new Image();
+		var vapor = new Image();
+		var brigue = new Image();
+		var lorcha = new Image();
+		var escuna = new Image();
+		var casetwo = new Image();
+		var fire = new Image();
+		
+		var fist = new Image();
+		var sinkship = new Image();
+		var rope = new Image();
+		var crack = new Image();
+		var woman = new Image();
+		var inquestion = new Image();
+		var knife = new Image();
+		//var barcaone = new Image();
+		ship.src = "ship.png";
+		barca.src = "barca.png";
+		galera.src = "galera.png";
+		vapor.src = "vapor.png";
+		brigue.src = "brigue.png";
+		lorcha.src = "lorcha.png";
+		escuna.src = "escuna.png";
+		fire.src="fire.png";
+		
+		fist.src = "fist.png";
+		casetwo.src = "case2.png";
+		sinkship.src = "sinkship.png";
+		rope.src = "rope.png";
+		crack.src = "crack.png";
+		woman.src = "woman.png";
+		inquestion.src = "inquestion.png";
+		knife.src = "knife.png";
+		var settingValue = false;
+		var evCache = new Array();//用於手勢放大
+		var prevDiff = -1;
+		var touchMoveTimes = 0;
+		//barcaone.src = "barca1.png"
+		
+		//以下用於圖表中
+
+		var chartAspectRatio = 0.8*window.innerWidth/0.1*window.innerHeight;
+		
+		Chart.defaults.font.family = "'Brush Script MT' , 'Garamond' , 'Georgia' , 'Times New Roman'";
+		var chartCanvasID = document.getElementById("chartCanvas");
+		var labels=[];
+		var data = {};
+		Chart.register(ChartDataLabels);
+		Chart.defaults.font.size = 30;
+
+		if(innerWidth<window.innerHeight){
+			
+			SHIP_TO_CANVAS_RATIO = 0.35;
+		}
+		var config = {
+			type: 'bar',
+			options: {
+				maintainAspectRatio: true,
+				aspectRatio: chartAspectRatio,
+				scales: {
+					xAxes: {
+						ticks: {
+							display: false,
+						}
+					},
+					yAxes: {
+						display: false
+					},
+				},
+
+
+				plugins:{
+					legend:{
+						display:false,
+					},
+					tooltip:{
+						enabled: false,
+
+					},
+					datalabels: {
+						 clamp: true,
+						 display: false,//最初要隱藏
+						 align: 'start',
+						 anchor: 'end',
+						 rotation: 90,
+
+						 formatter: function(value, context) {
+						  return context.chart.data.labels[context.dataIndex];
+						}
+					  },
+				}
+			}
+		};
+		var chartCanvas;
+		//以上用於圖表中
+		function handleImageLoad(){
+			bitmap = new createjs.Bitmap(image);
+			if(canvas.width>canvas.height){
+				bitmap.scaleX = canvas.width/image.width;
+				bitmap.scaleY = bitmap.scaleX;
+			}else{
+				bitmap.scaleY = canvas.height/image.height;
+				bitmap.scaleX = bitmap.scaleY;
+			}
+			stage.addChild(bitmap);
+			stage.update();
+			//var shipsvg = new createjs.Bitmap(ship);
+			//var shipsvg2 = new createjs.Bitmap(ship);
+			
+			PATHALL.push([ //PATHALL[0]：去卡亞俄
+			  MACAU.x/image.width, MACAU.y/image.height,
+			  
+			  TAIWAN_STRAIT.x/image.width, TAIWAN_STRAIT.y/image.height,
+			  JAPANSEA.x/image.width, JAPANSEA.y/image.height,
+			  
+				HAWAI.x/image.width, HAWAI.y/image.height,
+			  COLLAO.x/image.width, COLLAO.y/image.height,
+			]);
+			PATHALL.push([//PATHALL[1]：去哈瓦那第一程
+			  MACAU.x/image.width, MACAU.y/image.height,
+			  KWIN_NYON.x/image.width, KWIN_NYON.y/image.height,
+			  SOUTH_CHINA_SEA.x/image.width, SOUTH_CHINA_SEA.y/image.height,
+			  SINGAPORE.x/image.width, SINGAPORE.y/image.height,
+			  MALACCA_STRAIT.x/image.width, MALACCA_STRAIT.y/image.height,
+			  PENANG.x/image.width, PENANG.y/image.height,
+			  COLOMBA.x/image.width, COLOMBA.y/image.height,
+			  INDIAN_OCEAN1.x/image.width, INDIAN_OCEAN1.y/image.height,
+			  INDIAN_OCEAN2.x/image.width, INDIAN_OCEAN2.y/image.height,
+			]);
+			PATHALL.push([//PATHALL[2]：去哈瓦那第二程
+			  INDIAN_OCEAN3.x/image.width, INDIAN_OCEAN3.y/image.height,
+			  NATAL.x/image.width, NATAL.y/image.height,
+			  GEORGE.x/image.width, GEORGE.y/image.height,
+			  CAPE_OF_GOOD_HOPE.x/image.width, CAPE_OF_GOOD_HOPE.y/image.height,
+			  ATLANTIC_OCEAN1.x/image.width, ATLANTIC_OCEAN1.y/image.height,
+			  BAIA.x/image.width, BAIA.y/image.height,
+			  ST_PAUL.x/image.width, ST_PAUL.y/image.height,
+			  ATLANTIC_OCEAN2.x/image.width, ATLANTIC_OCEAN2.y/image.height,
+			  CARIBBEAN_SEA1.x/image.width, CARIBBEAN_SEA1.y/image.height,
+			  CARIBBEAN_SEA2.x/image.width, CARIBBEAN_SEA2.y/image.height,
+			  HAVANA.x/image.width, HAVANA.y/image.height,
+			]);
+			PATHALL.push([//PATHALL[3]：去舊金山
+				MACAU.x/image.width, MACAU.y/image.height,
+			  
+				TAIWAN_STRAIT.x/image.width, TAIWAN_STRAIT.y/image.height,
+				
+				SANFRANCISCO.x/image.width, SANFRANCISCO.y/image.height,
+			]);
+			PATHALL.push([//PATHALL[4]：去阿德雷德
+				MACAU.x/image.width, MACAU.y/image.height,
+				1262/image.width, 2403/image.height,
+				1930/image.width, 3741/image.height,
+				1608/image.width, 3685/image.height,
+				ADELAIDE.x/image.width, ADELAIDE.y/image.height,
+			]);
+			PATHALL.push([//PATHALL[5]：去檳城
+				MACAU.x/image.width, MACAU.y/image.height,
+				KWIN_NYON.x/image.width, KWIN_NYON.y/image.height,
+				SOUTH_CHINA_SEA.x/image.width, SOUTH_CHINA_SEA.y/image.height,
+				SINGAPORE.x/image.width, SINGAPORE.y/image.height,
+				MALACCA_STRAIT.x/image.width, MALACCA_STRAIT.y/image.height,
+				PENANG.x/image.width, PENANG.y/image.height,
+				786/image.width, 2652/image.height,
+			]);
+			PATHALL.push([//PATHALL[6]：去莫桑比克,只寫了第二段
+				INDIAN_OCEAN3.x/image.width, INDIAN_OCEAN3.y/image.height,
+				7014/image.width, 3405/image.height,
+				6875/image.width, 3218/image.height,
+			]);
+			PATHALL.push([//PATHALL[7]：去蘇利南,只寫了第二段
+				INDIAN_OCEAN3.x/image.width, INDIAN_OCEAN3.y/image.height,
+				NATAL.x/image.width, NATAL.y/image.height,
+				GEORGE.x/image.width, GEORGE.y/image.height,
+				CAPE_OF_GOOD_HOPE.x/image.width, CAPE_OF_GOOD_HOPE.y/image.height,
+				ATLANTIC_OCEAN1.x/image.width, ATLANTIC_OCEAN1.y/image.height,
+				BAIA.x/image.width, BAIA.y/image.height,				
+				4780/image.width, 2605/image.height,
+			]);
+			PATHALL.push([//PATHALL[8]：去爪哇
+				MACAU.x/image.width, MACAU.y/image.height,
+				KWIN_NYON.x/image.width, KWIN_NYON.y/image.height,
+				SOUTH_CHINA_SEA.x/image.width, SOUTH_CHINA_SEA.y/image.height,
+				SINGAPORE.x/image.width, SINGAPORE.y/image.height,
+				1031/image.width, 2951/image.height,
+			]);
+			PATHALL.push([//PATHALL[9]：去新加坡
+				MACAU.x/image.width, MACAU.y/image.height,
+				KWIN_NYON.x/image.width, KWIN_NYON.y/image.height,
+				SOUTH_CHINA_SEA.x/image.width, SOUTH_CHINA_SEA.y/image.height,
+				SINGAPORE.x/image.width, SINGAPORE.y/image.height,
+				911/image.width, 2803/image.height,
+			]);
+			PATHALL.push([//PATHALL[10]：去馬尼拉
+				MACAU.x/image.width, MACAU.y/image.height,
+				1133/image.width, 2448/image.height,
+				1225/image.width, 2531/image.height,
+			]);
+			PATHALL.push([//PATHALL[11]：去果亞
+				MACAU.x/image.width, MACAU.y/image.height,
+				KWIN_NYON.x/image.width, KWIN_NYON.y/image.height,
+				SOUTH_CHINA_SEA.x/image.width, SOUTH_CHINA_SEA.y/image.height,
+				SINGAPORE.x/image.width, SINGAPORE.y/image.height,
+				MALACCA_STRAIT.x/image.width, MALACCA_STRAIT.y/image.height,
+				PENANG.x/image.width, PENANG.y/image.height,
+				COLOMBA.x/image.width, COLOMBA.y/image.height,
+				265/image.width, 2598/image.height,
+				265/image.width, 2497/image.height,
+			]);
+			PATHALL.push([//PATHALL[12]：去詩蘭
+				MACAU.x/image.width, MACAU.y/image.height,
+				KWIN_NYON.x/image.width, KWIN_NYON.y/image.height,
+				SOUTH_CHINA_SEA.x/image.width, SOUTH_CHINA_SEA.y/image.height,
+				SINGAPORE.x/image.width, SINGAPORE.y/image.height,
+				MALACCA_STRAIT.x/image.width, MALACCA_STRAIT.y/image.height,
+				PENANG.x/image.width, PENANG.y/image.height,
+				COLOMBA.x/image.width, COLOMBA.y/image.height,
+			]);
+			PATHALL.push([//PATHALL[13]：去西貢
+				MACAU.x/image.width, MACAU.y/image.height,
+				1058/image.width, 2557/image.height,
+				1008/image.width, 2606/image.height,
+			]);
+			PATHALL.push([//PATHALL[14]：去哥斯達黎加
+			  MACAU.x/image.width, MACAU.y/image.height,
+			  
+			  TAIWAN_STRAIT.x/image.width, TAIWAN_STRAIT.y/image.height,
+			  JAPANSEA.x/image.width, JAPANSEA.y/image.height,
+			  
+				HAWAI.x/image.width, HAWAI.y/image.height,
+			  4413/image.width, 2641/image.height,
+			]);
+			PATHALL.push([//PATHALL[15]：去未知地方
+				MACAU.x/image.width, MACAU.y/image.height,
+				1272/image.width, 2415/image.height,
+				1573/image.width, 2476/image.height,
+			]);
+			PATHALL.push([//PATHALL[16]：折返澳門
+				MACAU.x/image.width, MACAU.y/image.height,
+				1226/image.width, 2361/image.height,
+				1204/image.width, 2452/image.height,
+				1103/image.width, 2484/image.height,
+				1061/image.width, 2432/image.height,
+				1072/image.width, 2383/image.height,
+				MACAU.x/image.width, MACAU.y/image.height,
+			]);
+			PATHALL.push([//PATHALL[17]：不老灣
+				MACAU.x/image.width, MACAU.y/image.height,
+				KWIN_NYON.x/image.width, KWIN_NYON.y/image.height,
+				SOUTH_CHINA_SEA.x/image.width, SOUTH_CHINA_SEA.y/image.height,
+				SINGAPORE.x/image.width, SINGAPORE.y/image.height,
+				MALACCA_STRAIT.x/image.width, MALACCA_STRAIT.y/image.height,
+				PENANG.x/image.width, PENANG.y/image.height,
+				801/image.width,  2745/image.height,
+			]);
+			PATHALL.push([//PATHALL[18]：安直港
+				1031/image.width, 2951/image.height,
+				612/image.width,  3030/image.height,
+				INDIAN_OCEAN2.x/image.width, INDIAN_OCEAN2.y/image.height,
+			]);
+			PATHALL.push([//PATHALL[19]：南中國海沉沒
+				MACAU.x/image.width, MACAU.y/image.height,
+				1089/image.width, 2951/image.height,
+				1131/image.width, 2567/image.height,
+			]);
+			PATHALL.push([//PATHALL[20]：印度支那沉沒
+				MACAU.x/image.width, MACAU.y/image.height,
+				1105/image.width, 2805/image.height,
+				955/image.width, 2664/image.height,
+			]);
+			PATHALL.push([ //PATHALL[21]：去大溪地
+				MACAU.x/image.width, MACAU.y/image.height,			  
+				TAIWAN_STRAIT.x/image.width, TAIWAN_STRAIT.y/image.height,
+				JAPANSEA.x/image.width, JAPANSEA.y/image.height,			  
+				2016/image.width, 2807/image.height,
+				3080/image.width, 3191/image.height,
+			]);
+			PATHALL.push([ //PATHALL[22]：去新西蘭
+				MACAU.x/image.width, MACAU.y/image.height,			  
+				1272/image.width, 2385/image.height,
+				1396/image.width, 2593/image.height,			  
+				1553/image.width, 2826/image.height,
+				1695/image.width, 2865/image.height,
+			]);
+			
+			PATHALL.push([ //PATHALL[23]：新西蘭回澳
+				1695/image.width, 2865/image.height,
+				1553/image.width, 2826/image.height,
+				1448/image.width, 2582/image.height,
+				1264/image.width, 2407/image.height,
+				MACAU.x/image.width, MACAU.y/image.height,
+			]);
+			PATHALL.push([ //PATHALL[24]：海上焚燬
+				MACAU.x/image.width, MACAU.y/image.height,			  
+				TAIWAN_STRAIT.x/image.width, TAIWAN_STRAIT.y/image.height,
+				JAPANSEA.x/image.width, JAPANSEA.y/image.height,	 
+			]);
+			PATHALL.push([ //PATHALL[25]：海上焚燬				
+				JAPANSEA.x/image.width, JAPANSEA.y/image.height,			  
+				2091/image.width, 2310/image.height,
+				2290/image.width, 2387/image.height,
+			]);
+			PATHALL.push([ //PATHALL[26]：函館		
+				MACAU.x/image.width, MACAU.y/image.height,			  
+				1247/image.width, 2284/image.height,
+				1484/image.width, 2189/image.height,
+				1690/image.width, 2085/image.height,
+				1723/image.width, 1924/image.height,
+				1769/image.width, 1896/image.height,
+				1681/image.width, 1900/image.height,
+			]);
+			PATHALL.push([ //PATHALL[27]：大溪地暴動，第一段	
+				MACAU.x/image.width, MACAU.y/image.height,			  
+				1395/image.width, 2418/image.height,
+				1633/image.width, 2824/image.height,
+				2002/image.width, 2947/image.height,
+				2929/image.width, 3162/image.height,
+			]);
+			PATHALL.push([ //PATHALL[28]：大溪地暴動，第二段	
+				2929/image.width, 3162/image.height,			  
+				2985/image.width, 3123/image.height,
+				3030/image.width, 3247/image.height,
+				3069/image.width, 3183/image.height,
+				3086/image.width, 3203/image.height,
+			]);
+			PATHALL.push([ //PATHALL[29]：經巽他往哈瓦那，第一段	
+				MACAU.x/image.width, MACAU.y/image.height,			  
+				1067/image.width, 2637/image.height,
+				947/image.width, 2730/image.height,
+				947/image.width, 2936/image.height,
+				915/image.width, 2957/image.height,
+			]);
+			PATHALL.push([ //PATHALL[30]：經巽他往哈瓦那，第二段	
+				915/image.width, 2957/image.height,		  
+				720/image.width, 3144/image.height,
+				INDIAN_OCEAN2.x/image.width, INDIAN_OCEAN2.y/image.height,
+			]);
+			PATHALL.push([ //PATHALL[31]：往卡亞俄中途華工暴動和放火，第一段
+				MACAU.x/image.width, MACAU.y/image.height,			  
+				TAIWAN_STRAIT.x/image.width, TAIWAN_STRAIT.y/image.height,
+				JAPANSEA.x/image.width, JAPANSEA.y/image.height,			
+			]);
+			PATHALL.push([ //PATHALL[32]：往卡亞俄中途華工暴動和放火，第二段				
+				JAPANSEA.x/image.width, JAPANSEA.y/image.height,			  
+				HAWAI.x/image.width, HAWAI.y/image.height,
+				COLLAO.x/image.width, COLLAO.y/image.height,
+			]);
+			PATHALL.push([ //PATHALL[33]：日本起事後回航，第一段				
+				MACAU.x/image.width, MACAU.y/image.height,			  
+				1183/image.width, 2358/image.height,
+				1347/image.width, 2167/image.height,
+				1299/image.width, 2106/image.height,
+				1430/image.width, 2106/image.height,
+			]);
+			PATHALL.push([ //PATHALL[34]：日本起事後回航，第二段				
+				1430/image.width, 2106/image.height,
+				1299/image.width, 2106/image.height,
+				1347/image.width, 2167/image.height,
+				1183/image.width, 2358/image.height,
+				MACAU.x/image.width, MACAU.y/image.height,				
+			]);
+			PATHALL.push([ //PATHALL[35]：華工暴動，殺多人，船返澳門，第一段				
+				MACAU.x/image.width, MACAU.y/image.height,
+				1265/image.width, 2395/image.height,
+				2048/image.width, 2437/image.height,
+			]);
+			PATHALL.push([ //PATHALL[36]：華工暴動，殺多人，船返澳門，第二段							
+				2048/image.width, 2437/image.height,
+				1265/image.width, 2403/image.height,
+				MACAU.x/image.width, MACAU.y/image.height,
+			]);
+		}
+
+		if (!window.indexedDB) {
+			window.alert("抱歉，你的瀏覽器無法支援。敬請使用其他瀏覽器。");
+			
+		}else{
+			//window.alert("瀏覽器通過測試。");
+			loadJson();
+			
+		}
+		async function loadJson() {
+		  const requestURL = 'jsonship_v1.json';//注意,有時瀏覽器會自行取舊的檔案,所以每次更新,應順便更新v後的數字，迫瀏覽器重新取檔案。
+		  const request = new Request(requestURL);
+		  const response = await fetch(request);
+		  const jsonship = await response.json();
+		  //console.log(jsonship);
+		  //deleteDB(jsonship);
+		  openDb(jsonship);
+		}
+		function deleteDB(jsonship){//已經不用的程式碼，用於手動地清除DB
+				var DBDeleteRequest = window.indexedDB.deleteDatabase(DB_NAME);
+				//var request = objectStore.clear();
+				DBDeleteRequest.onblocked = function(event) {
+					 //console.log("Error message: Database in blocked state. ");
+				};
+				DBDeleteRequest.onerror = function(event) {
+				  //console.log("Error deleting database.");
+				};
+
+				DBDeleteRequest.onsuccess = function(event) {
+				  //console.log("Database deleted successfully");
+					openDb(jsonship);
+				  //console.log(request.result); // should be null
+				};
+		}
+
+		function openDb(jsonship) {
+			var req = indexedDB.open(DB_NAME, DB_VERSION);
+			req.onsuccess = function (evt) {
+				db = this.result;
+				//var transaction = db.transaction(DB_STORE_NAME, 'readonly');
+				//var objectStore = transaction.objectStore(DB_STORE_NAME);
+				var transaction = db.transaction(DB_STORE_NAME, 'readwrite');
+				var objectStore = transaction.objectStore(DB_STORE_NAME);
+				for (i = 0; i < jsonship.jsonship.length; i++) { 
+					//console.log(jsonship.jsonship[i]);
+					objectStore.put(jsonship.jsonship[i]);
+				}
+				getMaxMinNumber();
+				createjs.Ticker.timingMode = createjs.Ticker.RAF;
+				createjs.Ticker.on("tick", tick);
+				
+			};
+			req.onerror = function (evt) {
+			  console.error("openDb:", evt.target.errorCode);
+			};
+
+			req.onupgradeneeded = function (evt) {
+
+				
+				
+				var objectStore = evt.target.result.createObjectStore(DB_STORE_NAME, {autoIncrement: true});
+				
+				objectStore.createIndex(DB_INDEX, DB_INDEX, { unique: false });
+				objectStore.createIndex("id", "id", { unique: true });
+			};
+		}
+		
+		/*
+		shiparray.push(shipsvg);
+		shiparray.push(shipsvg2);
+		//shipsvg.image = ship;
+		
+		//stageY = ;
+		stage.addChild(bitmap);
+		stage.addChild(shipsvg);
+		stage.addChild(shipsvg2);
+		getFixScale(shipsvg, SHIP_TO_CANVAS_RATIO);
+		getFixScale(shipsvg2, SHIP_TO_CANVAS_RATIO);
+		shipsvg.regX = 122;
+		shipsvg.regY = 112;
+		shipsvg2.regX = 122;
+		shipsvg2.regY = 112;
+		*/
+
+		
+				//shipsvg.x = MACAU.x;
+		//shipsvg.y = MACAU.y;
+		//stage.update();	
+		//handleResize();
+		createjs.Touch.enable(stage);
+		canvas.addEventListener("mousewheel", MouseWheelHandler, false);
+		canvas.addEventListener("DOMMouseScroll", MouseWheelHandler, false);
+
+		function MouseWheelHandler(e) {
+		
+			if (e.cancelable) {
+					try{
+						e.preventDefault();
+					}catch (error){
+						 //console.log("error in ev.preventDefault: "+error);
+					}
+			}
+			const {ctrlKey } = e
+			/*if (ctrlKey) {
+				e.preventDefault();
+			}*/
+			if(Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)))>0){
+				var zoom = 1.1;
+				
+			}else{
+				var zoom = 0.9;
+				
+			}
+			doZoom(zoom);
+		}
+		function doZoom(zoom){
+			var local = stage.globalToLocal(stage.mouseX, stage.mouseY);
+			stage.regX=local.x;
+			
+			stage.x=stage.mouseX;
+				
+			
+			if(zoom>1){
+				
+				
+				stage.regY=local.y;
+				stage.y=stage.mouseY;
+			}else{
+				var tmpHeight = image.height*stage.scaleY*bitmap.scaleY*0.9;
+				if(tmpHeight>canvas.height){
+									
+						stage.regY=local.y;
+						stage.y=stage.mouseY;
+							
+					
+				}else{
+					zoom=1;
+					stage.y=0;
+					stage.regY=0;
+					//stage.scaleY = bitmap.scaleY;
+				}
+			}
+			stage.scaleX=stage.scaleY*=zoom;
+			for (var i = 0; i < shiparray.length ; i++){
+				//console.log("shiparray: "+shiparray[i]);
+				getFixScale(shiparray[i].shipsvg, SHIP_TO_CANVAS_RATIO);
+			}
+			stage.update();
+		}
+		function getFixScale(obj, s){
+			var tmpImg = obj.getChildAt(0).image;
+			
+			obj.scaleX = s * canvas.width / ( obj.parent.scaleX * tmpImg.width );
+			//obj.scaleX = s * canvas.width / ( obj.parent.scaleX * 500 );
+			obj.scaleY = obj.scaleX;
+			//console.log(obj.parent+".scaleX: "+obj.parent.scaleX +obj.parent.scaleX+", obj.scaleX: "+ obj.scaleX+", Img: "+ tmpImg.src);
+		}
+		
+		canvas.addEventListener("pointerdown", function(e){
+			
+			
+			evCache.push(e);
+			var p = stage.globalToLocal(e.screenX, e.screenY);
+			var smootharray = [];
+			smootharray.push(p);
+			smootharray.push(p);
+			smootharray.push(p);
+			smootharray.push(p);
+			smootharray.push(p);
+			var offset={x:stage.x-p.x,y:stage.y-p.y};	
+			//var beforeScreen = {x: e.screenX, y:e.screenY};
+			//console.log("pointerDown", e);
+			//console.log("stage.x: " + stage.x+", "+"stage.y: " + stage.y);
+			//console.log("p.x: " + p.x+", "+"p.y: " + p.y);
+			//console.log("offset.x: "+offset.x +", offset.y:"+ offset.y);
+			//console.log("stage.mouseX: "+stage.mouseX+", stage.mouseY:"+stage.mouseY);
+			canvas.addEventListener("pointerup",pointerup_handler);
+			canvas.addEventListener("pointercancel",pointerup_handler);
+			canvas.addEventListener("pointerleave",pointerup_handler);
+			canvas.addEventListener("pointerout",pointerup_handler);
+			//if (e.pointerType=="touch"){
+			canvas.addEventListener("pressmove", pointermove_handler);
+			//}else{
+			canvas.addEventListener("pointermove", pointermove_handler);
+			//}
+			//setInterval(pointermove_handler, 500);
+			if(shiparray.length>0){
+				var shortestDistance = 999999999;
+				var shortestI = 0;
+				for(var i = 0; i < shiparray.length ; i++){
+					
+					var tmpDistance = Math.hypot(p.x - shiparray[i].shipsvg.x, p.y - shiparray[i].shipsvg.y)
+					if(tmpDistance < shortestDistance){
+						shortestDistance = tmpDistance;
+						shortestI = i;
+					}
+				}
+				shiparray[shortestI].shipsvg.bubbleShowAWhile();
+				//console.log("shortestI is: "+shortestI);
+			}
+			function pointermove_handler(ev){//滑鼠移動的函數
+				if (ev.cancelable) {
+					try{
+						ev.preventDefault();
+					}catch (error){
+						 //console.log("error in ev.preventDefault: "+error);
+					}
+				}
+				
+				 //console.log("pointerMove", ev);
+				 
+				 // Find this event in the cache and update its record with this event
+				 for (var i = 0; i < evCache.length; i++) {
+				   if (ev.pointerId == evCache[i].pointerId) {
+					  evCache[i] = ev;
+					  //console.log("evCache["+i+"]: "+ ev);
+				   break;
+				   }
+				 }
+
+				 // If two pointers are down, check for pinch gestures
+				 if (evCache.length >= 2) {
+				   // Calculate the distance between the two pointers
+				   var curDiff = Math.sqrt(Math.pow(evCache[0].screenX - evCache[1].screenX, 2)+Math.pow(evCache[0].screenY - evCache[1].screenY, 2));
+					var zoom =curDiff/prevDiff;
+					//console.log("touchMoveTimes: "+ touchMoveTimes+ "; zoom: " + zoom +"; curDiff: "+curDiff+"; prevDiff: "+prevDiff);
+					
+				   if (prevDiff > 0) {
+					doZoom(zoom);
+					 if (curDiff > prevDiff) {
+					   // The distance between the two pointers has increased
+					   //console.log("Pinch moving OUT -> Zoom in", ev);
+					   //ev.preventDefault();
+						
+					 }
+					 if (curDiff < prevDiff) {
+						//ev.preventDefault();
+					   // The distance between the two pointers has decreased
+					   //console.log("Pinch moving IN -> Zoom out",ev);
+
+					 }
+				   }
+
+				   // Cache the distance for the next move event
+				   prevDiff = curDiff;
+				 }else {
+						
+						//stage._updatePointerPosition(stage.id, e, stage.pageX, stage.pageY);
+						var tmpP = stage.globalToLocal(ev.screenX, ev.screenY);
+						smootharray.push(tmpP);
+						smootharray.shift();
+						var xPosCount = 0;//以下是盡可能減少globalToLocal()出錯而加的,因為globalToLocal()在canvas未更新前會出錯，跳回舊的位置
+						var yPosCount = 0;
+						for(var i = 1; i<smootharray.length ;i++){
+							if(smootharray[i].x > smootharray[i-1].x ){
+								xPosCount++;
+							}else if(smootharray[i].x < smootharray[i-1].x){
+								xPosCount--;
+							}
+							if(smootharray[i].y > smootharray[i-1].y ){
+								yPosCount++;
+							}else if(smootharray[i].y < smootharray[i-1].y){
+								yPosCount--;
+							}					
+						}
+						if(xPosCount>0 && smootharray[smootharray.length-1].x-smootharray[smootharray.length-2].x>0){
+							var tmpX = tmpP.x+offset.x; //stage.mouseX+ stage.x - stage.mouseX
+							stage.x = tmpX;
+						}else if(xPosCount<0 && smootharray[smootharray.length-1].x-smootharray[smootharray.length-2].x<0){
+							var tmpX = tmpP.x+offset.x; //stage.mouseX+ stage.x - stage.mouseX
+							stage.x = tmpX;
+						}
+						if((yPosCount>0 && smootharray[smootharray.length-1].y-smootharray[smootharray.length-2].y>0)||(yPosCount<0 && smootharray[smootharray.length-1].y-smootharray[smootharray.length-2].y<0)){
+							var tmpY = tmpP.y+offset.y;						
+							stage.y = tmpY;
+						}
+						//console.log("pointerMove", ev);
+						//console.log("ev.screenX: " + ev.screenX+", "+"ev.screenY: " + ev.screenY+", tmpP.x: " + tmpP.x+", "+"tmpP.y: " + tmpP.y);
+						//console.log("tmpP.x: " + tmpP.x+", "+"tmpP.y: " + tmpP.y);
+						//console.log("stage.mouseX: "+stage.mouseX+", stage.mouseY:"+stage.mouseY);
+						
+
+						//console.log("stage.x: " + stage.x+", "+"stage.y: " + stage.y);
+
+						
+						stage.update();	
+					
+				 }
+			 }
+			function pointerup_handler(ev) {
+			  //console.log(ev.type, ev);
+			  //console.log("pointerUp", ev);
+
+			   //clearInterval(pointermove_handler);
+			  // Remove this pointer from the cache and reset the target's
+				
+				for (var i = 0; i < evCache.length; i++) {
+				   if (evCache[i].pointerId == ev.pointerId) {
+					 evCache.splice(i, 1);
+					 break;
+				   }
+				 }
+
+
+			  // If the number of pointers down is less than two then reset diff tracker
+			  if (evCache.length < 2) {
+				prevDiff = -1;
+				if(evCache.length < 1){
+					canvas.removeEventListener("pointermove", pointermove_handler);
+					canvas.removeEventListener("pressmove", pointermove_handler);
+					canvas.removeEventListener("pointerup",pointerup_handler);
+					canvas.removeEventListener("pointercancel",pointerup_handler);
+					canvas.removeEventListener("pointerleave",pointerup_handler);
+					canvas.removeEventListener("pointerout",pointerup_handler);
+				}
+			  }
+			}
+			
+		});
+		window.addEventListener("resize", handleResize, false);
+		/*stage.addEventListener("stagemousedown", function(e) {			
+				var offset={x:stage.x-e.stageX,y:stage.y-e.stageY};			
+			stage.addEventListener("stagemousemove",function(ev) {			
+					stage.x = ev.stageX+offset.x;
+					var tmpY = ev.stageY+offset.y;
+					stage.y = tmpY;
+					stage.update();				
+			});
+			stage.addEventListener("stagemouseup", function(){				
+				stage.removeAllEventListeners("stagemousemove");
+
+			});
+		}); */
+		
+		
+		
+		function tick(event) {
+			stage.sortChildren(sortByZ);
+			function sortByZ(a,b) {
+				return a.y - b.y;
+			}
+			stage.update(event);		  
+		}
+		function handleChartTextResize(){
+			//console.log("handleChartTextResize");
+			var pixelChartInnerWidth = 0.8*window.innerWidth;
+			var pixelOfTenPercentInnerHeight = 0.1*window.innerHeight;
+			var div = document.createElement("div");
+			var fontSize = 30;
+			var fontArray = [];
+				div.innerHTML = "1870";
+				div.style.position = "absolute";
+				div.style.top  = "-9999px";
+				div.style.left = "-9999px";
+				div.style.fontFamily = "'Brush Script MT' , 'Garamond' , 'Georgia' , 'Times New Roman'";
+			do{
+				fontSize--;
+				
+				div.style.fontSize = fontSize + "px"; 
+				document.body.appendChild(div);
+				fontArray = [ div.offsetWidth, div.offsetHeight ];
+				console.log("fontSize: "+fontSize+" & fontArray[0]: "+fontArray[0]+"& fontArray[1]:"+ fontArray[1]+"& pixelOfTenPercentInnerHeight:"+pixelOfTenPercentInnerHeight+" &pixelChartInnerWidth:"+pixelChartInnerWidth);
+				document.body.removeChild(div);
+			}while(fontArray[0]>pixelOfTenPercentInnerHeight ||fontArray[1]> (pixelChartInnerWidth/24));
+			chartCanvas.options.plugins.datalabels.font.size = fontSize;			
+			chartCanvas.update('active');	
+		}
+		function handleResize(event) {
+				//console.log("resized");
+				  var w = window.innerWidth,
+					  h = window.innerHeight;
+				  var pos = 0;
+				  stage.canvas.width = w;
+				  stage.canvas.height = h;
+				  
+				  //var pos = tween ? tween.rawPosition : 0;//如果tween是true, pos 會等於tween.rawPosition，否則會等於０。　？是條件 (三元) 運算子
+				  //var pos2 = tween2 ? tween2.rawPosition : 0;
+				  //createjs.Tween.removeTweens(shipsvg);
+				  //createjs.Tween.removeTweens(shipsvg2);
+				  // Make a new path using the width/height ratios
+				  /*pathe.length = 0;
+				  pathw1.length = 0;
+				  pathw2.length = 0;
+				  pathsf.length = 0;
+				  pathad.length = 0;
+				  pathpg.length = 0;
+				   pathmb.length = 0;
+				   pathsn.length = 0;
+				   pathjv.length =0;
+				   pathsg.length=0;
+				   pathml.length=0;
+				   pathgoa.length=0;
+				   pathcl.length=0;
+				   pathsaigon.length=0;
+				   pathcr.length=0;
+				   pathunknown.length=0;
+				   pathreturnmacau.length=0;
+				   pathbelawan.length=0;
+				   pathag.length=0;*/
+					var tmppath=[];
+					//var tmppathall = PATHALL;
+					PATHALL.forEach(function(item){
+						//console.log("Array.isArray(item): "+Array.isArray(item));
+						//var tmppathpoints =new Array(item);
+						//console.log("tmppathpoints: "+tmppathpoints);
+						var tmpathnewpoints = [];
+						for(var i=0; i<item.length;i+=2){
+							//console.log("item[i]: "+item[i+1]);
+							tmpathnewpoints.push(
+								item[i]* image.width * bitmap.scaleX + 3*i*Math.random(), 
+								item[i+1]* image.height * bitmap.scaleY+ 3*i*Math.random(),	
+							);
+							//console.log("tmppathnewpoints: "+tmpathnewpoints.toString());
+						}
+						
+						tmppath.push(tmpathnewpoints);
+						//console.log("tmppath: "+tmppath.length);
+					});
+				
+				//console.log("PATHE_RATIOS: "+PATHE_RATIOS.toString());
+				//console.log("image.width: "+image.width);
+				//console.log("bitmap.scaleX: "+bitmap.scaleX);
+				//console.log("bitmap.scaleY: "+bitmap.scaleY);
+				//console.log("pathe: "+ pathe.toString());
+				var earliestMonth = 12;
+				for (var i=0; i<shiparray.length; i++){
+					
+					if(shiparray[i].shipsvg.hasActiveTweens){
+						createjs.Tween.removeTweens(shiparray[i].shipsvg);
+						shiparray[i].shipsvg.rotation = 0;
+					}else{
+						var curMonth = Math.floor(shiparray[i].month);
+						if(curMonth<earliestMonth){
+							earliestMonth = curMonth;
+						}
+					}
+				}
+				//console.log("earliestMonth: "+earliestMonth);
+				for (var i=0; i<shiparray.length; i++){
+					
+					
+					
+					var pos = shiparray[i].tween ? shiparray[i].tween.rawPosition : 0;
+					//var tmptmp = shiparray[i].month-earliestMonth;
+					//console.log("shiparray[i].month: "+tmptmp);
+					var month = shiparray[i].month ? (shiparray[i].month-earliestMonth)*monthTime : i*monthTime;
+					month += shiparray[i].day ? shiparray[i].day*monthTime/30 : i*monthTime/600;
+					
+					var journeyTimeE = monthTime*4;
+					if(shiparray[i].month<=3 || shiparray[i].month>=10){
+						var journeyTimeW = monthTime*4.9 / 2;
+						var journeyTimeJV = monthTime;
+						var journeyTimeSG = monthTime*0.6;
+						var journeyTimeGOA = monthTime*1.5;
+					}else{
+						var journeyTimeW = monthTime*6 / 2;
+						var journeyTimeJV = monthTime*2;
+						var journeyTimeSG = monthTime*1.5;
+						var journeyTimeGOA = monthTime*2.3;
+					}
+					if(shiparray[i].specialcase==2){//處理不同的事件
+						journeyTimeW = monthTime*7.7;
+					}
+					
+					switch(shiparray[i].destination ? shiparray[i].destination : 0){
+						case "哈瓦那":							
+						case "古巴":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[1]}},journeyTimeW).to({guide: {path: tmppath[2]}},journeyTimeW).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
+						case "卡亞俄":
+						case "秘魯":
+						case "利馬":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path:tmppath[0]}},journeyTimeE).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
+							break;
+						case "舊金山":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[3]}},journeyTimeE).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
+							break;
+						case "阿德雷德":
+						
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[4]}},monthTime*1.5).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
+							break;
+						case "檳城":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[5]}},journeyTimeW).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
+						case "莫桑比克":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path:  tmppath[1]}},journeyTimeW).to({guide: {path: tmppath[6]}},monthTime/2).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
+						case "蘇利南":
+						case "德梅拉拉":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[1]}},journeyTimeW).to({guide: {path: tmppath[7]}},journeyTimeW*0.8).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
+						case "爪哇":
+						case "巴達維亞":
+						case "巴達維亞和三寶瓏":
+
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[8]}},journeyTimeJV).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
+						case "新加坡":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[9]}},journeyTimeSG).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
+						case "馬尼拉":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[10]}},monthTime*0.6).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
+							break;
+						case "果亞":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[11]}},journeyTimeGOA).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
+						case "詩蘭":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[12]}},journeyTimeGOA).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
+						case "西貢":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[13]}},monthTime*0.7).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
+						case "哥斯達黎加":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[14]}},journeyTimeE).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
+							break;
+						case "澳門":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).call(bubbleNow, [shiparray[i]], this).to({guide: {path: tmppath[16]}},monthTime).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							
+							shiparray[i].tween.setPosition(pos);
+							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
+							break;
+						case "不老灣":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[17]}},monthTime).wait(monthTime/2).call(bubbleNow, [shiparray[i]], this).call(showfist, [shiparray[i]], this).wait(monthTime/3).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
+						case "經安直港":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[8]}},journeyTimeJV).call(bubbleNow, [shiparray[i]], this).call(showfist, [shiparray[i]], this).wait(monthTime/3).to({guide: {path: tmppath[18]}},monthTime).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
+						case "南中國海沉沒":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[19]}},monthTime).call(bubbleNow, [shiparray[i]], this).call(sink, [shiparray[i]], this).wait(monthTime/4).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
+						case "印度支那沉沒":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[20]}},monthTime).call(bubbleNow, [shiparray[i]], this).call(sink, [shiparray[i]], this).wait(monthTime/4).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
+						case "船行5日暴動後往古巴":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha: 0} ).wait(month).call(bubbleNow, [shiparray[i]], this).call(showfist, [shiparray[i]], this).to({ alpha:1} ).to({guide: {path: tmppath[1]}},journeyTimeW).to({guide: {path: tmppath[2]}},journeyTimeW).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
+						case "大溪地":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).call(bubbleNow, [shiparray[i]], this).to({guide: {path: tmppath[21]}},journeyTimeE*0.6).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
+							break;
+						case "新西蘭回澳":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[22]}},monthTime*2.5).call(showfist, [shiparray[i]], this).wait(monthTime/3).call(changeShipOrientation, [shiparray[i]], this).call(bubbleNow, [shiparray[i]], this).to({guide: {path: tmppath[23]}},monthTime*2.5).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
+							break;
+						case "海上焚燬":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path: tmppath[24]}},journeyTimeE*0.4).call(bubbleNow, [shiparray[i]], this).call(catchfire, [shiparray[i]], this).to({guide: {path: tmppath[25]}},journeyTimeE*0.6).call(sink, [shiparray[i]], this).wait(monthTime/4).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
+							break;
+						case "函館":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path:tmppath[26]}},monthTime*3).call(bubbleNow, [shiparray[i]], this).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
+							break;
+						case "大溪地暴動":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[27]}},journeyTimeE*0.7).call(bubbleNow, [shiparray[i]], this).call(showfist, [shiparray[i]], this).to({guide: {path: tmppath[28]}},monthTime*1.5).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
+							break;
+						case "經巽他往哈瓦那":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[29]}},journeyTimeW/2).call(bubbleNow, [shiparray[i]], this).call(showknife, [shiparray[i]], this).wait(monthTime).to({guide: {path: tmppath[30]}},journeyTimeW/2).to({guide: {path: tmppath[2]}},journeyTimeW).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
+						case "往卡亞俄中途華工暴動和放火":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path:tmppath[31]}},journeyTimeE*0.15).call(bubbleNow, [shiparray[i]], this).call(showfist, [shiparray[i]], this).call(catchfire, [shiparray[i]], this).to({guide: {path:tmppath[32]}},journeyTimeE*0.9).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
+							break;
+						case "日本起事後回航":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path:tmppath[33]}},monthTime*2).call(bubbleNow, [shiparray[i]], this).call(showfist, [shiparray[i]], this).call(changeShipOrientation, [shiparray[i]], this).to({guide: {path:tmppath[34]}},monthTime*2).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
+							break;
+						case "華工暴動，殺多人，船返澳門":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path:tmppath[35]}},journeyTimeE/2).call(bubbleNow, [shiparray[i]], this).call(showfist, [shiparray[i]], this).call(changeShipOrientation, [shiparray[i]], this).to({guide: {path:tmppath[36]}},journeyTimeE/2).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
+						case "航行10個月至哈瓦那":
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({ alpha: 0 } ).wait(month).to({ alpha: 1 } ).to({guide: {path: tmppath[1]}},monthTime*5).call(bubbleNow, [shiparray[i]], this).to({guide: {path: tmppath[2]}},monthTime*5).call(showArrival, [shiparray[i]], this).to( { alpha: 0 }, ARRIVALTIME).call(arrival, [shiparray[i].counter], this);
+							shiparray[i].tween.setPosition(pos);
+							break;
+						default://其他航線**************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************
+							//記得不可亂插入
+							shiparray[i].tween = createjs.Tween.get(shiparray[i].shipsvg).to({alpha:0}).wait(month).to({alpha:1}).to({guide: {path:tmppath[15]}},monthTime).call(showArrival, [shiparray[i]], this).to({ alpha: 0 }, ARRIVALTIME ).call(arrival, [shiparray[i].counter], this);
+							//記得不可亂插入
+							shiparray[i].tween.setPosition(pos);
+							shiparray[i].shipsvg.getChildAt(0).scaleX = -1* Math.abs(shiparray[i].shipsvg.getChildAt(0).scaleX);
+							break;
+					}
+					 
+					
+				}
+			//handleChartTextResize();
+					
+		 }
+
+		 function arrival(counterNum, obj){//移除船隻
+			//console.log("arrival: "+counterNum);
+			for(let i=0; i<shiparray.length;i++){
+				if(counterNum == shiparray[i].counter){
+				
+					stage.removeChild(shiparray[i].shipsvg);
+					shiparray[i].bubble.remove();	
+					
+					shiparray.splice(i, 1);
+					//console.log("shiparray.length: "+shiparray.length);
+					break;
+				}
+			}
+		 }
+		 function showArrival(array, obj){//顯示船隻的結果
+			//console.log("array.bubble.innerHTML: "+ array.bubble.innerHTML);
+			var htmlp = array.bubble.getElementsByClassName("triangle-isosceles");	
+			//console.log("htmlp: "+htmlp[0]);
+			if(array.event){
+				htmlp[0].innerHTML ="豬仔船"+array.shipname+"號"+array.event;
+			}else{
+				htmlp[0].innerHTML = "豬仔船"+array.shipname+"號";
+				if(array.destination){
+					htmlp[0].innerHTML+="到達"+array.destination+"。";
+				}else{
+					htmlp[0].innerHTML+="航向未明。";
+				}
+			}
+
+			if(oddEven){//以下控制出現上箭頭還是下箭頭				
+				//console.log(" htmlspan[0].style.bottom: "+ array.bubble.innerHTML);
+				oddEven = false;
+				var htmlspan = document.createElement('span');
+				htmlspan.className = "triangle-isosceles-span";
+				htmlp[0].appendChild(htmlspan);
+				array.DOMBubble.regY = array.bubble.clientHeight+array.shipbitmap.image.height/6.8;
+			}else{
+				oddEven = true;
+				var htmlspan = document.createElement('span');
+				htmlspan.className = "triangle-isosceles-span-up";
+				htmlp[0].appendChild(htmlspan);
+				array.DOMBubble.regY = 0-array.shipbitmap.image.height/6.8;
+				 //var htmlafter = window.getComputedStyle(htmlp[0], ":after").getPropertyValue("content");
+				//var htmlafter =  array.bubble.getElementsByClassName("triangle-isosceles:after");
+				//console.log("htmlafter: "+htmlafter);
+				//htmlspan[0].style.top = htmlspan[0].style.bottom;
+				//htmlspan[0].style.borderTop = htmlspan[0].style.borderBottom;
+				//htmlspan[0].style.borderBottom = 0;
+				//htmlspan[0].style.bottom = 0;
+				 
+			}
+			//var bubble = new createjs.DOMElement(cursor.value.bubble);
+			
+			
+			for(var tmpNum = 0; tmpNum < labels.length; tmpNum++){
+				if(labels[tmpNum] == array.year && array.cules && array.shipsvg.canAddCules){
+					chartCanvas.data.datasets[0].data[tmpNum] -= Math.floor(array.cules);
+					chartCanvas.options.plugins.datalabels.display = true;
+					//console.log("chartCanvas.data.datasets[0].data["+tmpNum+"]: "+chartCanvas.data.datasets[0].data[tmpNum]);
+					break;
+				}
+			}
+			
+			chartCanvas.update('active');
+			
+			array.shipsvg.bubbleShowAWhile();
+		 }
+		 function bubbleNow(array, obj){
+			array.shipsvg.bubbleShowAWhile();
+		 }
+		 function showfist(array, obj){
+			//for(let i=0; i<shiparray.length;i++){
+				//if(counterNum == shiparray[i].counter){
+					array.casebitmap = new createjs.Bitmap(fist);									
+					array.casebitmap.regX = array.shipbitmap.image.width/2;
+					array.casebitmap.regY = 300;
+					array.shipsvg.addChild(array.casebitmap);
+					createjs.Tween.get(array.casebitmap).to({alpha:0}, 3000);
+				//}
+			//}
+		 }
+		 function showknife(array, obj){
+			array.casebitmap = new createjs.Bitmap(knife);
+			array.casebitmap.regX = array.shipbitmap.image.width/2;
+			array.casebitmap.regY = 300;
+			array.shipsvg.addChild(array.casebitmap);
+			createjs.Tween.get(array.casebitmap).to({rotation:90}, 500).to({alpha:0}, 3000);
+		 }
+		 function sink(array, obj){
+			array.casebitmap = new createjs.Bitmap(sinkship);
+			array.casebitmap.regX = array.shipbitmap.regX;
+			array.casebitmap.regY = array.shipbitmap.regY;
+			array.shipbitmap.alpha = 0;
+			array.shipsvg.addChild(array.casebitmap);
+		 }
+		 function changeShipOrientation(array, obj){
+			array.shipsvg.getChildAt(0).scaleX *= -1;
+		 }
+		 function catchfire(array, obj){
+			array.casebitmap = new createjs.Bitmap(fire);
+			array.casebitmap.regX = array.shipbitmap.image.width/2;
+			array.casebitmap.regY = 300;
+			array.shipsvg.addChild(array.casebitmap);
+		 }
+		
+		
+		function getMaxMinNumber (callback) {
+			var tmpOpenReq = indexedDB.open(DB_NAME);
+			tmpOpenReq.onsuccess = function() {
+				var tmpDb = tmpOpenReq.result;
+				var tmpTransaction = tmpDb.transaction(DB_STORE_NAME, 'readonly');
+				var tmpObjectStore = tmpTransaction.objectStore(DB_STORE_NAME);
+				var tmpIndex = tmpObjectStore.index(DB_INDEX);
+				var maxDB_INDEX = null;
+				var minDB_INDEX = null;
+				var openCursorRequestMax = tmpIndex.openCursor(null, 'prevunique');
+				
+
+
+				openCursorRequestMax.onsuccess = function (event) {
+					if (event.target.result) {
+						maxDB_INDEX = event.target.result.value; //the object with max revision
+						//console.log("maxDB_INDEX:　"+　maxDB_INDEX.year);
+						range.max = maxDB_INDEX.year;
+						var openCursorRequestMin = tmpIndex.openCursor(null, 'nextunique');
+						openCursorRequestMin.onsuccess = function (event) {
+							if (event.target.result) {
+								minDB_INDEX = event.target.result.value; //the object with max revision
+								//console.log("minDB_INDEX:　"+　minDB_INDEX.year);
+								range.min = minDB_INDEX.year;
+								var tmpData = [];
+								for(var yr = range.min; yr <= range.max; yr++){
+									labels.push(yr);
+									tmpData.push(0);//將chart一開始時全部設為零。
+								}
+								var datasets = [{
+									backgroundColor: 'rgb(136, 8, 8)',
+									borderColor: 'rgb(255, 99, 132)',
+									data: tmpData,
+									}];
+								data.labels = labels;
+								data.datasets = datasets;
+								config.data =data;
+								chartCanvas = new Chart(
+									chartCanvasID,
+									config
+								  );
+								//console.log("labels: "+labels.toString());
+							}
+						};
+					}
+				};
+				
+				/*tmpTransaction.oncomplete = function (event) {
+					tmpDb.close();
+					if(callback) //you'll need a calback function to return to your code
+						callback(maxDB_INDEX);
+				};*/
+			}
+		}
+		function setValue(){
+			if(settingValue){
+				return;
+			}
+			settingValue=true;
+			range.removeEventListener('mouseup', setValue);
+			range.removeEventListener('touchend', setValue);
+			var tmpOpenReq = indexedDB.open(DB_NAME);
+				tmpOpenReq.onsuccess = function() {
+					var tmpDb = tmpOpenReq.result;
+					var tmpTransaction = tmpDb.transaction(DB_STORE_NAME, 'readonly');
+					var tmpObjectStore = tmpTransaction.objectStore(DB_STORE_NAME);
+					var tmpIndex = tmpObjectStore.index(DB_INDEX);
+					const keyRng = IDBKeyRange.only(range.value);
+					//var getRequest = tmpIndex.get(range.value);
+					const getRequest = tmpIndex.openCursor(keyRng);
+					//var tmpCounter = 0;
+					var cursorCounter = 0;
+					getRequest.onsuccess = function() {
+						var cursor = event.target.result;
+						
+						//console.log(getRequest.result);
+						if(cursor) {
+							cursorCounter++;
+							//console.log("cursor: "+ cursor);
+							//tmpCounter ++;
+							//console.log("cursor.value.year: "+ cursor.value.year);
+							cursor.value.shipsvg = new createjs.Container();
+							cursor.value.bubble = document.createElement('div');
+							cursor.value.bubble.className = "bubble-container";
+							var htmlp = document.createElement('p');
+							var htmlspan = document.createElement('span');
+							htmlspan.className = "triangle-isosceles-span";
+							htmlp.className = "triangle-isosceles";
+							htmlp.appendChild(htmlspan);
+							
+							htmlp.innerHTML += "船名: " + cursor.value.shipname + "<br>" ;
+							if (cursor.value.day){
+								htmlp.innerHTML += "啟航: " +  cursor.value.year + "年" + cursor.value.month +  "月"+  cursor.value.day+"日<br>";
+							}else if(cursor.value.month){
+								htmlp.innerHTML += "啟航: " +  cursor.value.year + "年" + cursor.value.month +  "月<br>";
+							}else{
+								htmlp.innerHTML += "啟航: " +  cursor.value.year+  "年<br>";
+							}
+															
+							if(cursor.value.nation){htmlp.innerHTML += "國籍: " + cursor.value.nation + "<br>" };
+							
+							if(cursor.value.caption){htmlp.innerHTML += "船長: " + cursor.value.caption + "<br>" };
+							if(cursor.value.destination){htmlp.innerHTML += "目的地: " + cursor.value.destination + "<br>" };
+							if(cursor.value.cules){htmlp.innerHTML += "苦力: " + cursor.value.cules + "人<br>" };
+							if(cursor.value.event){htmlp.innerHTML += "事件: " + cursor.value.event + "<br>" };
+							document.body.appendChild(cursor.value.bubble);
+							cursor.value.bubble.appendChild(htmlp);
+							var DOMBubble = new createjs.DOMElement(cursor.value.bubble);
+							cursor.value.DOMBubble = DOMBubble;
+							switch(cursor.value.shiptype){//處理不同船形的圖片
+								case "Barca":
+									cursor.value.shipbitmap = new createjs.Bitmap(barca);
+									htmlp.innerHTML += "船型: 三桅帆船<br>";
+									break;
+								case "Galera":
+									cursor.value.shipbitmap = new createjs.Bitmap(galera);
+									htmlp.innerHTML += "船型: 槳帆船<br>";
+									break;
+								case "Lorcha":
+									cursor.value.shipbitmap = new createjs.Bitmap(lorcha);
+									htmlp.innerHTML += "船型: 老閘船<br>";
+									break;
+								case "Brigue":
+									cursor.value.shipbitmap = new createjs.Bitmap(brigue);
+									htmlp.innerHTML += "船型: 雙桅橫帆船<br>";
+									break;
+								case "Vapor":
+									cursor.value.shipbitmap = new createjs.Bitmap(vapor);
+									htmlp.innerHTML += "船型: 輪船<br>";
+									break;
+								case "Escuna":
+								case "Be. Escuna":
+									cursor.value.shipbitmap = new createjs.Bitmap(escuna);
+									htmlp.innerHTML += "船型: 雙桅縱帆船<br>";
+									break;
+								
+								default:
+									cursor.value.shipbitmap = new createjs.Bitmap(ship);
+									break;
+							}
+							
+							//var hit = new createjs.Shape();
+							//hit.graphics.beginFill("#000").drawRect(0, 0, cursor.value.shipbitmap.image.width, cursor.value.shipbitmap.image.height);
+							//cursor.value.shipsvg.hitArea = hit;
+							//cursor.value.shipbitmap.addChild(hit);
+							cursor.value.counter = counter;
+							counter++;
+							
+							cursor.value.shipsvg.addChild(cursor.value.shipbitmap);
+							
+							cursor.value.shipsvg.addChild(DOMBubble);
+							//cursor.value.shipsvg.addChild(hit);
+							//console.log("cursor.value.shipsvg.getChildAt(0)"+ cursor.value.shipsvg.getChildAt(0));
+							//console.log("cursor.value.shipsvg.getChildAt(1)"+ cursor.value.shipsvg.getChildAt(1).className);
+							stage.addChild(cursor.value.shipsvg);
+							//console.log("cursor.shipsvg: "+ cursor.shipsvg);
+							//stage.addChild(cursor.value.shipsvg);
+							
+							//console.log("cursor.value.bubble.clientWidth: "+ cursor.value.bubble.clientWidth);
+							//console.log("cursor.value.bubble.clientHeight: "+ cursor.value.bubble.clientHeight);
+							cursor.value.shipbitmap.regX = cursor.value.shipbitmap.image.width/2;
+							cursor.value.shipbitmap.regY = cursor.value.shipbitmap.image.height/1.13;
+							//hit.regX = cursor.value.shipbitmap.image.width/2;
+							//hit.regY = 300;
+							DOMBubble.regX = cursor.value.bubble.clientWidth/2;
+							DOMBubble.regY = cursor.value.bubble.clientHeight+cursor.value.shipbitmap.image.height/6.8;
+							DOMBubble.alpha = 0;
+							cursor.value.shipsvg.alpha = 0;
+							
+							switch(cursor.value.specialcase){//處理不同的事件
+								case "1"://船失火，170人死亡後返回澳門。
+								case "22"://船開2日，華工燒船，600名華工燒死。
+								case "25"://船起火，600名華工燒死，救回50人。
+									//DOMBubble.alpha = 1;
+									cursor.value.destination = "澳門";
+									cursor.value.casebitmap = new createjs.Bitmap(fire);									
+									cursor.value.casebitmap.regX = cursor.value.shipbitmap.image.width/2;
+									cursor.value.casebitmap.regY = 300;
+									cursor.value.shipsvg.addChild(cursor.value.casebitmap);
+									//cursor.value.plaque = new createjs.Bitmap(plaque);
+									//cursor.value.plaque.regX = cursor.value.plaque.image.width/2;
+									//cursor.value.plaque.regY = (cursor.value.plaque.image.height-cursor.value.shipbitmap.image.height)/2+300;
+									
+									//cursor.value.shipsvg.addChild(cursor.value.plaque);
+									
+									break;
+								case "2"://case 2: 航行230天才到古巴，276人死亡。
+										
+										//casetwo.onload = (cursor.value) =>{
+											//console.log("cursor.value.id: "+cursor.value.id);
+											//DOMBubble.alpha = 1;
+											cursor.value.casebitmap = new createjs.Bitmap(casetwo);
+											cursor.value.casebitmap.regX = -cursor.value.shipbitmap.image.width/4;
+											cursor.value.casebitmap.regY = 300;
+											cursor.value.shipsvg.addChild(cursor.value.casebitmap);
+										//}
+									break;
+								case "3":
+									//DOMBubble.alpha = 1;
+									cursor.value.shipbitmap.filters = [
+										 new createjs.ColorFilter(0,0.5,0,1, -255,255,-255,1),
+										 new createjs.BlurFilter(10, 10, 1)
+									 ];
+									cursor.value.shipbitmap.cache(0, 0, cursor.value.shipbitmap.image.width,340);
+									break;
+								case "4":
+									//DOMBubble.alpha = 1;
+									cursor.value.destination = "不老灣";
+									break;
+								case "5":
+									//DOMBubble.alpha = 1;
+									cursor.value.destination = "經安直港";
+									break;
+								case "6":
+									//DOMBubble.alpha = 1;
+									cursor.value.destination = "南中國海沉沒";
+									break;
+								case "7":
+									//DOMBubble.alpha = 1;
+									cursor.value.destination = "印度支那沉沒";
+									break;
+								case "8"://船行5日暴動，130名華工死亡，未必到達古巴。
+								case "27"://開船4天後華工暴動，80人死亡
+									//DOMBubble.alpha = 1;
+									cursor.value.destination = "船行5日暴動後往古巴";
+									break;
+								case "9"://在澳門要塞下3里處，未開船前發生暴動。
+								case "10"://華工暴動，遇難開入香港。
+									//DOMBubble.alpha = 1;
+									cursor.value.destination = "澳門";
+									cursor.value.casebitmap = new createjs.Bitmap(fist);											
+									cursor.value.casebitmap.regX = cursor.value.shipbitmap.image.width/2;
+									cursor.value.casebitmap.regY = 300;
+									cursor.value.shipsvg.addChild(cursor.value.casebitmap);
+									break;
+								case "11"://船抵大溪地，僅存162名華工。
+									//DOMBubble.alpha = 1;
+									cursor.value.destination = "大溪地";
+									break;
+								case "12"://在新西蘭附近華工暴動，船開回澳門。
+									//DOMBubble.alpha = 1;
+									cursor.value.destination = "新西蘭回澳";
+									break;
+								case "13"://船在海上被華工焚燬。
+									//DOMBubble.alpha = 1;
+									cursor.value.destination = "海上焚燬";
+									break;
+								case "14"://在日本函館被發現，船上餘下42名華工。
+									//DOMBubble.alpha = 1;
+									cursor.value.destination = "函館";
+									break;
+								case "15"://華工暴動，最終抵大溪地時，華工死亡過半。
+									//DOMBubble.alpha = 1;
+									cursor.value.destination = "大溪地暴動";
+									break;
+								case "16"://8 名水手因不想繼續航行而被捕，但後來他們被釋放並登船。
+									//DOMBubble.alpha = 1;
+									cursor.value.casebitmap = new createjs.Bitmap(rope);									
+									cursor.value.casebitmap.regX = cursor.value.shipbitmap.image.width/2;
+									cursor.value.casebitmap.regY = 100;
+									cursor.value.shipsvg.addChild(cursor.value.casebitmap);
+									break;
+								case "17"://由於船舶狀況不佳，最初無法獲得開船准照。
+									//DOMBubble.alpha = 1;
+									cursor.value.casebitmap = new createjs.Bitmap(crack);									
+									cursor.value.casebitmap.regX = cursor.value.shipbitmap.image.width/2;
+									cursor.value.casebitmap.regY = 300;
+									cursor.value.shipsvg.addChild(cursor.value.casebitmap);
+									break;
+								case "18"://有政府授權帶 2 個女孩。
+									//DOMBubble.alpha = 1;
+									cursor.value.casebitmap = new createjs.Bitmap(woman);									
+									cursor.value.casebitmap.regX = cursor.value.shipbitmap.image.width/2;
+									cursor.value.casebitmap.regY = 300;
+									cursor.value.shipsvg.addChild(cursor.value.casebitmap);
+									break;
+								case "19"://由於船舶狀況不佳，未知最終歷史上有沒有開船
+									//DOMBubble.alpha = 1;
+									cursor.value.casebitmap = new createjs.Bitmap(inquestion);									
+									cursor.value.casebitmap.regX = cursor.value.shipbitmap.image.width/2;
+									cursor.value.casebitmap.regY = 300;
+									cursor.value.shipsvg.addChild(cursor.value.casebitmap);									
+									break;
+								case "20"://在巽他海峽，華工殺死船長，船開至巴達維亞換船長航行。
+									//DOMBubble.alpha = 1;
+									cursor.value.destination = "經巽他往哈瓦那";									
+									break;
+								case "21"://華工暴動，放火燒船。
+									//DOMBubble.alpha = 1;
+									cursor.value.destination = "往卡亞俄中途華工暴動和放火";	
+									break;
+								case "23"://船至日本海面，華工起事，日政府遣送華工回國。
+								case "26"://船至日本，被日本政府遣送回國。
+									cursor.value.destination = "日本起事後回航";
+									break;
+								case "24"://華工暴動，殺多人，船返澳門。
+									cursor.value.destination = "華工暴動，殺多人，船返澳門";
+									break;
+								case "28"://嚴重超載，航行10個月才到埗，125人死亡。
+									cursor.value.destination = "航行10個月至哈瓦那";
+									break;
+									
+							}
+							for(var tmpNum = 0; tmpNum < labels.length; tmpNum++){
+								if(labels[tmpNum] == cursor.value.year && chartCanvas.data.datasets[0].data[tmpNum]==0){			
+									cursor.value.shipsvg.canAddCules = true;
+								}
+							}
+							
+							getFixScale(cursor.value.shipsvg, SHIP_TO_CANVAS_RATIO);
+							shiparray.push(cursor.value);
+							
+							/*cursor.value.shipsvg.addEventListener("click", ()=>{
+								
+								DOMBubble.alpha = 1;
+								createjs.Tween.get(DOMBubble).wait(2000).to({ alpha: 0 }, 1000 );
+							});*/
+							
+							cursor.value.shipsvg.bubbleShowAWhile = function (){
+								
+								//DOMBubble.regY = cursor.value.bubble.clientHeight+50;
+								
+								//console.log("bubble.regY: "+DOMBubble.regY+ ", cursor.value.bubble.clientHeight;"+cursor.value.bubble.clientHeight);
+								DOMBubble.alpha = 1;
+								createjs.Tween.get(DOMBubble).wait(2000).to({ alpha: 0 }, 1000 );
+							}
+							cursor.continue();
+						}else{
+							if(cursorCounter==0){
+								changeValueDisplayText = true;
+								changeValue();
+							}
+							//console.log('Entries all displayed. Total: '+cursorCounter );
+							//tmpCounter = 0;
+							//console.log("shiparray.toString(): "+ shiparray.toString());
+							handleResize();
+							
+								range.addEventListener('mouseup', setValue);
+								range.addEventListener('touchend', setValue);
+								settingValue=false;
+							
+						}
+					}
+
+					/*tmpIndex.openCursor().onsuccess = function(event) {
+						var cursor = event.target.result;
+						if(cursor) {
+							//console.log("cursor: "+ cursor);
+							//console.log("cursor.year: "+ cursor.year);
+							cursor.shipsvg = new createjs.Bitmap(ship);
+							//console.log("cursor.shipsvg: "+ cursor.shipsvg);
+							stage.addChild(cursor.shipsvg);
+							
+							getFixScale(cursor.shipsvg, SHIP_TO_CANVAS_RATIO);
+							
+							cursor.shipsvg.regX = 122;
+							cursor.shipsvg.regY = 112;
+							shiparray.push(cursor);
+							
+							cursor.continue();
+						} else {
+							//console.log('Entries all displayed.');
+							//console.log("shiparray.toString(): "+ shiparray.toString());
+							handleResize();
+						}
+					};*/
+				}
+		}
+		
+
+		function changeValue(){
+			clearTimeout(timeoutID);
+			if(changeValueDisplayText){
+				//console.log("yearTextField.style.fontSize: "+yearTextField.style.fontSize);
+
+				//yearTextField.style.fontSize = "20vw";
+				if(innerWidth>window.innerHeight){
+					yearTextField.innerHTML += "<div style='font-size: 7vw; position: absolute; top:55vh;left:0vw; width:100vw; text-align: center';>沒資料</div>";
+				}else{
+					yearTextField.innerHTML += "<div  style='font-size: 20vw';>沒資料</div>";
+				}
+				changeValueDisplayText = false;
+			}else{
+				yearTextField.innerHTML = range.value;
+				
+			}
+			var oppArray = ["0.95","0.9","0.85", "0.8", "0.75","0.7", "0.65","0.6", "0.55","0.5", "0.45","0.4", "0.35","0.3", "0.25","0.2", "0.15","0.1", "0.5","0"];
+			var tmpX = 0;
+			yearTextField.style.visibility = "visible";
+
+			(function next() {
+				yearTextField.style.opacity = oppArray[tmpX];
+				if(++tmpX < oppArray.length) {
+					timeoutID = setTimeout(next, 200); //數字消失的速度
+				}else{
+					
+					yearTextField.style.visibility = "hidden";
+					
+				}
+			})();
+		};
+		function hidePlqaue(){
+			var oppArray = ["0.9", "0.8", "0.7", "0.6", "0.5", "0.4", "0.3", "0.2", "0.1", "0"];
+			var tmpX = 0;
+			(function next() {
+				document.getElementById('plaqueholder').style.opacity = oppArray[tmpX];
+				if(++tmpX < oppArray.length) {
+					var timeoutID2 = setTimeout(next, 100); //數字消失的速度
+				}else{					
+					document.getElementById('plaqueholder').style.display = 'none'; 
+					document.removeEventListener("pointerdown", hidePlqaue);					
+				}
+			})();
+
+		}
+
+		document.addEventListener("DOMContentLoaded", setValue);
+		document.addEventListener("pointerdown", hidePlqaue);
+		range.addEventListener('mouseup', setValue);
+		range.addEventListener('touchend', setValue);
+		range.addEventListener('input', changeValue);
+		
+	}
+      
+	
+      
+</script>
+	<canvas id="mapCanvas" style="background-color:white;" >不支援</canvas>
+	<div id="chartDIV">
+		<canvas id="chartCanvas"  ></canvas>
+	</div>
+	<div>
+
+	
+		<div id = "yearTextField"></div>
+		<input id="range" type="range" step="1">
+		<div id="plaqueholder" >
+			
+			<div style="width: 350px; height:260px; position: absolute; top:50%;  left:50%; transform: translate(-50%, -50%);background-color:#FFFECD;"   >
+				<p style="padding: 25px;" >本賣豬仔船運圖根據憲報和相關研究結果，顯示從澳門出發的豬仔船航行情況。敬請拖拉下方的時間橫軸選擇年份，然後點擊船隻查看航行資料，也可使用滑鼠滾輪和觸屏手勢縮放地圖。下方棒形圖顯示被賣豬仔的數量。</p>
+			</div>
+			<img class= "plaque" src="plaque.png" width="579px"></img>
+		</div>
+		
+		
+		
+		<p>by inaciso 2022</p>
+	</div>
+</body>
+</html>
