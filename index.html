@@ -780,7 +780,7 @@
 			obj.scaleY = obj.scaleX;			
 		}
 		
-		canvas.addEventListener("pointerdown", function(e){
+		document.addEventListener("pointerdown", function(e){
 			var since = e.timeStamp - pointerDownLog;
 		
 
@@ -843,14 +843,14 @@
 				//console.log("p.x: " + p.x+", "+"p.y: " + p.y);
 				//console.log("offset.x: "+offset.x +", offset.y:"+ offset.y);
 				//console.log("stage.mouseX: "+stage.mouseX+", stage.mouseY:"+stage.mouseY);
-				canvas.addEventListener("pointerup",pointerup_handler);
-				canvas.addEventListener("pointercancel",pointerup_handler);
-				canvas.addEventListener("pointerleave",pointerup_handler);
-				canvas.addEventListener("pointerout",pointerup_handler);
+				document.addEventListener("pointerup",pointerup_handler);
+				document.addEventListener("pointercancel",pointerup_handler);
+				document.addEventListener("pointerleave",pointerup_handler);
+				document.addEventListener("pointerout",pointerup_handler);
 				//if (e.pointerType=="touch"){
-				canvas.addEventListener("pressmove", pointermove_handler);
+				document.addEventListener("pressmove", pointermove_handler);
 				//}else{
-				canvas.addEventListener("pointermove", pointermove_handler);
+				document.addEventListener("pointermove", pointermove_handler);
 				//}
 				//setInterval(pointermove_handler, 500);
 				if(shiparray.length>0){
@@ -967,12 +967,12 @@
 				  if (evCache.length < 2) {
 					prevDiff = -1;
 					if(evCache.length < 1){
-						canvas.removeEventListener("pointermove", pointermove_handler);
-						canvas.removeEventListener("pressmove", pointermove_handler);
-						canvas.removeEventListener("pointerup",pointerup_handler);
-						canvas.removeEventListener("pointercancel",pointerup_handler);
-						canvas.removeEventListener("pointerleave",pointerup_handler);
-						canvas.removeEventListener("pointerout",pointerup_handler);
+						document.removeEventListener("pointermove", pointermove_handler);
+						document.removeEventListener("pressmove", pointermove_handler);
+						document.removeEventListener("pointerup",pointerup_handler);
+						document.removeEventListener("pointercancel",pointerup_handler);
+						document.removeEventListener("pointerleave",pointerup_handler);
+						document.removeEventListener("pointerout",pointerup_handler);
 					}
 				  }
 				}
